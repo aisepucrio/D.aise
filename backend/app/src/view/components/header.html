@@ -1,0 +1,49 @@
+{# =============================================================================
+   Header global — único ponto de manutenção para topo da aplicação:
+   hamburger, drawer de navegação, overlay e título.
+   Para estilos extras (ex.: página de prompts): defina header_extra_class antes do include.
+   ============================================================================= #}
+<header class="app-header {{ header_extra_class | default('') }}">
+  <button type="button" class="nav-hamburger" onclick="toggleNavDrawer()" aria-label="Abrir menu">
+    <svg class="nav-hamburger-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 6h16M4 12h16M4 18h16" />
+    </svg>
+  </button>
+
+  <h1 class="app-title">Github Docs</h1>
+</header>
+
+<div id="nav-overlay" class="nav-overlay" onclick="closeNavDrawer()" aria-hidden="true"></div>
+
+<nav id="nav-drawer" class="nav-drawer" aria-label="Menu de navegação">
+  <button type="button" class="nav-close" onclick="closeNavDrawer()" aria-label="Fechar menu">&times;</button>
+  <ul class="nav-links">
+    <li><a href="/" class="nav-link{% if request.path == '/' %} active{% endif %}" onclick="closeNavDrawer()">Página inicial</a></li>
+    <li><a href="/prompts" class="nav-link{% if request.path and request.path.startswith('/prompts') %} active{% endif %}" onclick="closeNavDrawer()">Prompts</a></li>
+    <li><a href="/models" class="nav-link{% if request.path and request.path.startswith('/models') %} active{% endif %}" onclick="closeNavDrawer()">Modelos de LLM</a></li>
+  </ul>
+</nav>
+
+<script>
+(function() {
+  function openNavDrawer() {
+    document.getElementById('nav-drawer').classList.add('open');
+    document.getElementById('nav-overlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeNavDrawer() {
+    document.getElementById('nav-drawer').classList.remove('open');
+    document.getElementById('nav-overlay').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  function toggleNavDrawer() {
+    var drawer = document.getElementById('nav-drawer');
+    drawer.classList.toggle('open');
+    document.getElementById('nav-overlay').classList.toggle('open');
+    document.body.style.overflow = drawer.classList.contains('open') ? 'hidden' : '';
+  }
+  window.toggleNavDrawer = toggleNavDrawer;
+  window.closeNavDrawer = closeNavDrawer;
+  window.openNavDrawer = openNavDrawer;
+})();
+</script>

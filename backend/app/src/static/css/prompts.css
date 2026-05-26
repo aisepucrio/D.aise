@@ -1,0 +1,518 @@
+/* Reset & Base */
+* {
+    box-sizing: border-box;
+    font-family: Inter, Arial, Helvetica, sans-serif;
+}
+
+body {
+    margin: 0;
+    background-color: #f4f6fa;
+    color: #1f2937;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.container {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    min-width: 0; /* permite que flex children encolham */
+}
+
+/* ================= Sidebar ================= */
+/* Proporção fixa: ~35% da tela, com min/max para não ficar absurdo em qualquer resolução */
+.sidebar {
+    flex: 0 0 35%;
+    min-width: 280px;
+    max-width: 480px;
+    background-color: #ffffff;
+    border-right: 1px solid #e5e7eb;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow: hidden;
+}
+
+.sidebar a {
+    text-decoration: none;
+    color: #4a6cf7;
+    font-size: 14px;
+}
+
+.sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sidebar-header h2 {
+    margin: 0;
+    font-size: 20px;
+}
+
+.sidebar-header button {
+    background-color: #4a6cf7;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.sidebar-header button:hover {
+    background-color: #3b5de0;
+}
+
+#prompt-filter {
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #d1d5db;
+}
+
+#prompt-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    overflow-y: auto;
+}
+
+/* Prompt item */
+.prompt-item {
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    /* justify-content: space-between; */
+    align-items: center;
+    transition: background 0.2s;
+}
+
+.prompt-item:hover {
+    background-color: #f1f5ff;
+}
+
+.prompt-item.active {
+    background-color: #e0e7ff;
+    border-left: 4px solid #4a6cf7;
+    padding-left: 8px;
+}
+
+.prompt-item.active .prompt-name {
+    font-weight: 700; /* negrito */
+}
+
+
+.prompt-name {
+    font-weight: 500;
+}
+
+.prompt-type {
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.prompt-actions-left {
+    display: flex;
+    align-items: center;
+    width: 52px; /* espaço fixo pros ícones */
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.prompt-actions-right {
+    width: 48px; /* espaço fixo da estrela */
+    display: flex;
+    justify-content: flex-end;
+    flex-shrink: 0;
+     margin-left: auto; 
+}
+
+
+/* ================= Content ================= */
+/* Área principal ocupa o restante (~65%), com mínimo para não espremer o formulário */
+.content {
+    flex: 1;
+    min-width: 320px;
+    min-height: 0;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow: auto;
+}
+
+.content-header {
+    display: grid;
+    grid-template-columns: 2fr 1fr auto;
+    gap: 12px;
+    align-items: center;
+}
+
+.content-header h1 {
+    grid-column: 1 / -1;
+    margin: 0 0 8px 0;
+    font-size: 22px;
+}
+
+.content-header input,
+.content-header select {
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #d1d5db;
+    font-size: 14px;
+    padding-left: 18px;
+
+}
+
+.default-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+}
+
+/* Description */
+#prompt-description {
+    resize: none;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #d1d5db;
+    font-size: 14px;
+    padding-left: 18px;
+
+}
+
+/* Prompt editor */
+#prompt-content {
+    flex: 1;
+    resize: none;
+    padding: 14px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    font-family: monospace;
+    font-size: 14px;
+    background-color: #fafafa;
+    padding-top: 27px;
+    padding-left: 18px;
+}
+
+/* ================= Footer ================= */
+
+.content-footer {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+}
+
+button.primary {
+    background-color: #4a6cf7;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 16px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+button.primary:hover {
+    background-color: #3b5de0;
+}
+
+button.danger {
+    background-color: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    visibility: hidden
+}
+
+button.danger:hover {
+    background-color: #dc2626;
+}
+
+
+/* ================= Prompt Groups ================= */
+
+.prompt-group {
+    margin-bottom: 8px;
+}
+
+.prompt-group-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 6px;
+    background-color: #f9fafb;
+}
+
+.prompt-group-header:hover {
+    background-color: #eef2ff;
+}
+
+.prompt-group-items {
+    list-style: none;
+    padding: 4px 0 4px 12px;
+    margin: 0;
+}
+
+.prompt-group-items .prompt-item {
+    margin-left: 8px;
+}
+
+
+/* ================= Default Prompt Star ================= */
+
+.prompt-star {
+    font-size: 32px;
+    cursor: pointer;
+    margin-left: 8px;
+    color: #9ca3af;
+    /* cinza */
+    transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.prompt-star:hover {
+    transform: scale(1.2);
+    color: #f59e0b;
+    /* dourado */
+}
+
+.prompt-star.active {
+    color: #f59e0b;
+    /* dourado */
+}
+
+/* ================= Modal ================= */
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-overlay.hidden {
+    display: none;
+}
+
+.modal {
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 20px 24px;
+    width: 420px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.modal h3 {
+    margin: 0 0 8px 0;
+    font-size: 18px;
+}
+
+.modal p {
+    font-size: 14px;
+    color: #374151;
+    margin-bottom: 16px;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+button.secondary {
+    background: #e5e7eb;
+    color: #374151;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 14px;
+    cursor: pointer;
+}
+
+button.secondary:hover {
+    background: #d1d5db;
+}
+
+/* ================= Prompt ID Display ================= */
+
+.prompt-id-display {
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: -4px;
+    margin-bottom: 12px;
+    font-family: monospace;
+      grid-column: 1 / -1; 
+}
+
+.prompt-id-display.hidden {
+    display: none;
+}
+
+
+/* ================= Prompt Variables ================= */
+
+.prompt-editor-wrapper {
+    display: flex;
+    gap: 16px;
+    flex: 1;
+    min-height: 0;
+}
+
+.prompt-editor-wrapper textarea {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Proporcional em telas grandes; em telas menores pode encolher (flex) */
+.prompt-variables-box {
+    flex: 0 0 260px;
+    min-width: 200px;
+    max-width: 320px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.prompt-variables-box h4 {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.prompt-variables-box ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.prompt-variable {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: monospace;
+    font-size: 13px;
+    padding: 4px 0;
+    color: #dc2626; /* vermelho */
+}
+
+.prompt-variable.ok {
+    color: #16a34a; /* verde */
+}
+
+.prompt-variable .check {
+    font-weight: bold;
+}
+
+
+
+.hidden{
+    display: none;
+}
+
+/* Delete X Icon     */
+
+.prompt-delete-x {
+    width: 18px;
+    height: 18px;
+    position: relative;
+    cursor: pointer;
+    margin-right: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.prompt-delete-x .x-line {
+    position: absolute;
+    width: 14px;
+    height: 2px;
+    background-color: #9ca3af;
+    border-radius: 2px;
+    transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.prompt-delete-x .x-line:first-child {
+    transform: rotate(45deg);
+}
+
+.prompt-delete-x .x-line:last-child {
+    transform: rotate(-45deg);
+}
+
+.prompt-delete-x:hover .x-line {
+    background-color: #ef4444;
+}
+
+/* prompt duplicate */
+.prompt-duplicate {
+    font-size: 16px;
+    font-weight: 600;
+    color: #9ca3af;
+    cursor: pointer;
+    margin-right: 6px;
+    user-select: none;
+    transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.prompt-duplicate:hover {
+    color: #4a6cf7; /* azul */
+    transform: scale(1.15);
+}
+
+/* opcional: aparecer só no hover */
+.prompt-duplicate,
+.prompt-delete-x {
+    opacity: 0;
+}
+
+.prompt-item:hover .prompt-duplicate,
+.prompt-item:hover .prompt-delete-x {
+    opacity: 1;
+}
+
+/* ================= Responsivo: proporção consistente em qualquer tela ================= */
+@media (max-width: 900px) {
+    .container {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        flex: none;
+        width: 100%;
+        max-width: none;
+        min-width: 0;
+        max-height: 45vh;
+        border-right: none;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .content {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .prompt-editor-wrapper {
+        flex-direction: column;
+    }
+
+    .prompt-variables-box {
+        flex: none;
+        width: 100%;
+        max-width: none;
+        min-width: 0;
+    }
+}

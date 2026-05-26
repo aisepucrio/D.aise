@@ -1,0 +1,174 @@
+/* =============================================================================
+   Header global — estilos do topo da aplicação (barra + hamburger + drawer + overlay)
+   Paleta do projeto: #2c3e50, #3498db, #2980b9, #f4f6f8
+   Tipografia: igual ao style.css (body) — o menu não depende da fonte da página.
+   ============================================================================= */
+
+.app-header,
+.nav-drawer,
+.nav-overlay {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-shrink: 0;
+}
+
+.app-header-prompts {
+  margin-bottom: 0;
+  padding: 12px 24px 12px 16px;
+  background-color: #fff;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.app-header .app-title {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #2c3e50;
+  font-weight: 600;
+  font-family: inherit;
+}
+
+/* Botão Hamburger — reset explícito: style.css aplica fundo azul e margin em TODOS os button */
+button.nav-hamburger {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  margin-right: 0;
+  font-weight: normal;
+  border-radius: 0;
+  background-color: transparent;
+  border: none;
+  color: #000;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+button.nav-hamburger:hover,
+button.nav-hamburger:active,
+button.nav-hamburger:focus {
+  background-color: transparent;
+  color: #000;
+  transform: none;
+  opacity: 0.7;
+}
+
+button.nav-hamburger:focus-visible {
+  outline: 2px solid #3498db;
+  outline-offset: 2px;
+  opacity: 1;
+}
+
+.nav-hamburger-icon {
+  width: 24px;
+  height: 24px;
+  display: block;
+  color: inherit;
+}
+
+/* Overlay (fundo escurecido) */
+.nav-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 9998;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s ease-in-out, visibility 0.25s ease-in-out;
+}
+
+.nav-overlay.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Drawer (menu lateral) */
+.nav-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 280px;
+  max-width: 85vw;
+  height: 100vh;
+  background-color: #fff;
+  border-right: 1px solid #e5e7eb;
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+  z-index: 9999;
+  transform: translateX(-100%);
+  transition: transform 0.25s ease-in-out;
+  display: flex;
+  flex-direction: column;
+}
+
+.nav-drawer.open {
+  transform: translateX(0);
+}
+
+/* Botão fechar (X) */
+.nav-close {
+  align-self: flex-end;
+  width: 40px;
+  height: 40px;
+  margin: 8px;
+  padding: 0;
+  background: none;
+  border: none;
+  font-size: 28px;
+  line-height: 1;
+  color: #555;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.nav-close:hover {
+  color: #2c3e50;
+}
+
+/* Lista de links */
+.nav-links {
+  list-style: none;
+  padding: 0 16px 24px;
+  margin: 0;
+}
+
+.nav-links li {
+  margin-bottom: 4px;
+}
+
+.nav-link {
+  display: block;
+  padding: 12px 14px;
+  color: #2c3e50;
+  text-decoration: none;
+  font-size: 15px;
+  border-radius: 6px;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.nav-link:hover {
+  background-color: #f4f6f8;
+  color: #3498db;
+}
+
+.nav-link.active {
+  background-color: #eef6fd;
+  color: #3498db;
+  font-weight: 600;
+}
+
+.nav-link-disabled {
+  color: #9ca3af;
+  cursor: default;
+}
+
+.nav-link-disabled:hover {
+  background-color: transparent;
+  color: #9ca3af;
+}

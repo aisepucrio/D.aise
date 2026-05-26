@@ -1,0 +1,1365 @@
+/* ==============================
+   GERAL
+================================= */
+body {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background-color: #f4f6f8;
+  color: #333;
+  margin: 0;
+  padding: 20px;
+}
+
+/* ==============================
+   HOME — Select Project / GitHub
+================================= */
+.home-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.home-actions-row > button[type="button"] {
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.home-import-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+/* Import e cabeçalho do accordion: mesma “pegada” do Select Project (sem esticar largura) */
+.home-import-stack > button[type="button"] {
+  white-space: nowrap;
+  align-self: flex-start;
+}
+
+.github-token-accordion {
+  width: max-content;
+  max-width: 100%;
+  min-width: 0;
+  border: 1px solid #cfd8dc;
+  border-radius: 6px;
+  background: #fff;
+  overflow: hidden;
+}
+
+/*
+ PAT clássico (ghp_): ~40 caracteres; fine-grained (github_pat_…): costuma passar de 80–120+.
+  Largura baseada em ~96ch no input monoespaçado + margem para ícone do olho e botões.
+*/
+.github-token-accordion--open {
+  width: min(100%, max(48rem, 96ch + 7.5rem));
+  min-width: min(100%, max(36rem, 72ch + 6rem));
+}
+
+.github-token-accordion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  margin: 0;
+  margin-right: 0;
+  padding: 8px 16px;
+  font: inherit;
+  font-size: inherit;
+  font-weight: bold;
+  line-height: 1.2;
+  white-space: nowrap;
+  color: #2c3e50;
+  background: #eceff1;
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.github-token-accordion-header:hover {
+  background: #e0e4e7;
+}
+
+.github-token-accordion-arrow {
+  font-size: 11px;
+  transition: transform 0.2s ease;
+}
+
+.github-token-accordion-arrow.collapsed {
+  transform: rotate(-90deg);
+}
+
+.github-token-panel {
+  padding: 12px;
+  border-top: 1px solid #cfd8dc;
+}
+
+.github-token-help {
+  margin: 0 0 10px 0;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary, #666);
+  line-height: 1.35;
+}
+
+.github-token-field-label {
+  display: block;
+  margin: 0 0 6px 0;
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+.github-token-input-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.github-token-input-shell {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.github-token-input {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 38px 8px 10px;
+  border: 1px solid #546e7a;
+  border-radius: 6px;
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+  box-sizing: border-box;
+  background: #fff;
+}
+
+.github-token-accordion--open .github-token-input {
+  min-width: min(100%, 96ch);
+}
+
+.github-token-input::placeholder {
+  color: #9e9e9e;
+}
+
+.github-token-eye-inside {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  margin: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #78909c;
+  cursor: pointer;
+}
+
+.github-token-eye-inside:hover {
+  color: #455a64;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.github-token-eye-inside svg {
+  display: block;
+}
+
+/* Um único “slot”: só um ícone visível por vez (nunca lado a lado). */
+.github-token-eye-slot {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.github-token-eye-layer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.github-token-eye-layer[hidden] {
+  display: none !important;
+}
+
+.github-token-save-icon {
+  pointer-events: none;
+  line-height: 1;
+}
+
+.github-token-link-wrap {
+  margin: 10px 0 0 0;
+  font-size: 0.85rem;
+  color: #555;
+}
+
+.github-token-link-wrap a {
+  color: #2980b9;
+}
+
+.import-modal-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 10px 0 0 0;
+  padding: 6px 10px;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: #616161;
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+}
+
+.import-modal-hint-icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.2rem;
+  height: 1.2rem;
+  margin-top: 0.06rem;
+  border-radius: 50%;
+  background: #9e9e9e;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.import-modal-hint-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.import-modal-hint strong {
+  font-weight: 600;
+  color: #424242;
+}
+
+.alert-banner-info {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #90caf9;
+  background: #e3f2fd;
+  color: #1565c0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.alert-banner-warning {
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #ffcc80;
+  background: #fff8e1;
+  color: #e65100;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+h1,
+h2,
+h3 {
+  color: #2c3e50;
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* ==============================
+   BOTÕES PRINCIPAIS
+================================= */
+button {
+  background-color: #3498db;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  margin-right: 8px;
+  font-weight: bold;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+button:hover {
+  background-color: #2980b9;
+}
+
+button:active {
+  transform: scale(0.97);
+}
+
+/* GitHub token: cabeçalho do accordion e controles neutros (não usar azul primário global) */
+button.github-token-accordion-header {
+  background-color: #eceff1 !important;
+  color: #2c3e50 !important;
+  margin-right: 0 !important;
+}
+
+button.github-token-accordion-header:hover {
+  background-color: #e0e4e7 !important;
+  color: #2c3e50 !important;
+}
+
+button.github-token-eye-inside {
+  background: transparent !important;
+  color: #78909c !important;
+  border: none !important;
+  padding: 4px !important;
+  margin-right: 0 !important;
+  border-radius: 4px !important;
+  font-weight: normal !important;
+}
+
+button.github-token-eye-inside:hover {
+  background: rgba(0, 0, 0, 0.05) !important;
+  color: #455a64 !important;
+}
+
+button.github-token-save-circle {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  padding: 0 !important;
+  margin: 0 !important;
+  margin-right: 0 !important;
+  border-radius: 50% !important;
+  background: #f5f5f5 !important;
+  color: #37474f !important;
+  border: 1px solid #b0bec5 !important;
+  font-weight: normal !important;
+  font-size: 1.35rem !important;
+  line-height: 1;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+button.github-token-save-circle:hover:not(:disabled) {
+  background: #eeeeee !important;
+  color: #263238 !important;
+}
+
+button.github-token-save-circle:disabled {
+  opacity: 0.45 !important;
+  cursor: not-allowed !important;
+}
+
+button.github-token-save-circle.is-token-saved {
+  background: #e8f5e9 !important;
+  border-color: #a5d6a7 !important;
+  color: #2e7d32 !important;
+  font-size: 1.05rem !important;
+}
+
+button.github-token-clear-circle {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  padding: 0 !important;
+  margin: 0 !important;
+  margin-right: 0 !important;
+  border-radius: 50% !important;
+  background: #ffebee !important;
+  color: #c62828 !important;
+  border: 1px solid #ef9a9a !important;
+  font-weight: normal !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+button.github-token-clear-circle:hover:not(:disabled) {
+  background: #ffcdd2 !important;
+  color: #b71c1c !important;
+}
+
+button.github-token-clear-circle:disabled {
+  opacity: 0.4 !important;
+  cursor: not-allowed !important;
+}
+
+/* linha de botões ao lado do input (Path, Folder name) */
+.form-field-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+  align-items: center;
+}
+
+/* botões de ação do formulário (Copy, Open folder) - estilo unificado */
+.copy-btn,
+.action-btn,
+#openExplorerBtn {
+  padding: 6px 12px;
+  font-size: 13px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.copy-btn {
+  width: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.copy-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.copy-icon svg {
+  width: 1em;
+  height: 1em;
+  font-size: 16px;
+}
+
+#openExplorerBtn.action-btn {
+  width: auto;
+}
+
+/* ==============================
+   CONTAINER DE PROJETO
+================================= */
+#projectContainer {
+  display: none;
+  margin-top: 20px;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.column {
+  flex: 1 1 400px;
+  padding: 15px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  background-color: #fff;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.05);
+  margin-bottom: 20px;
+}
+
+/* ==============================
+   FORMULÁRIO
+================================= */
+.form-field {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 12px;
+}
+
+.form-field label {
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #555;
+}
+
+.form-field input,
+.form-field textarea {
+  padding: 8px;
+  border: 1px solid #bbb;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-field input:focus,
+.form-field textarea:focus {
+  border-color: #3498db;
+  box-shadow: 0 0 4px rgba(52, 152, 219, 0.3);
+}
+
+/* inputs readonly / bloqueados */
+.readonly-input {
+  background-color: #eee;
+  /* cinza claro para indicar bloqueado */
+  color: #5d5d5d;
+  /* texto mais apagado */
+  cursor: not-allowed;
+  /* cursor bloqueado ao passar o mouse */
+}
+
+.readonly-input:focus {
+  border-color: #ccc;
+  /* não muda ao focar */
+  box-shadow: none;
+}
+/* ==============================
+   LISTA DE PROJETOS SALVOS
+================================= */
+
+#savedProjectsContainer {
+  margin-top: 40px;
+  position: relative;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  padding: 32px 16px 16px; /* espaço real pro header */
+  background-color: #f4f6f8; /* IGUAL ao body */
+}
+
+/* header flutuante */
+#projectsHeader {
+  position: absolute;
+  top: -14px;
+  left: 16px;
+
+  /* RESET do h2 */
+  margin: 0;
+
+  background-color: #f4f6f8;
+  padding: 4px 10px;
+
+  font-size: 15px;
+  font-weight: 600;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* lista */
+#savedProjectsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+
+
+.saved-project {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #ddd;
+  padding: 12px 16px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  background-color: #fff;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.saved-project:hover {
+  background-color: #f0f4f7;
+  transform: translateY(-2px);
+}
+
+.project-info {
+  flex: 1;
+  cursor: pointer;
+}
+
+/* ==============================
+   BOTÃO DE EXCLUSÃO
+================================= */
+.delete-btn {
+  background-color: #e74c3c;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.delete-btn:hover {
+  background-color: #c0392b;
+}
+
+.delete-btn:active {
+  transform: scale(0.95);
+}
+
+/* ==============================
+   ÁRVORE DO PROJETO
+================================= */
+
+#projectTree {
+  background-color: #f8f9fa;
+  padding: 12px;
+  border-radius: 6px;
+  font-family: "Courier New", Courier, monospace;
+  overflow: auto;
+  height: 100%;
+  border: 1px solid #ccc;
+  border-top: none;
+}
+
+/* ====== Abas (Tabs) ====== */
+.tab-container {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background-color: #fff;
+  overflow: hidden;
+}
+
+.tab-header {
+  display: flex;
+  border-bottom: 1px solid #ddd;
+  border-bottom: none;
+  background-color: #f7f7f7;
+  /* background-color: #a31010; */
+  margin: 0;
+  gap: 0;
+  padding: 0;
+  width: 100%;
+}
+
+.tab-btn {
+  border-radius: 0;
+  flex: 1;
+  padding: 8px 12px;
+  background: white;
+  border: none;
+  font-weight: 600;
+  color: #555;
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  border-bottom: 1px solid #ddd;
+  ;
+}
+
+.tab-btn:hover {
+  background-color: #e6f0fa;
+}
+
+.tab-btn.active {
+  background-color: #f8f9fa;
+  color: white;
+  color: #555;
+  border-bottom: none;
+}
+
+.tab-content {
+  display: none;
+  /* padding: 10px; */
+  max-height: 700px;
+  overflow-y: auto;
+  background-color: #f8f9fa;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+/*  */
+
+/* Modal full screen */
+#loadingModal {
+  display: none;
+  /* inicialmente escondido */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  /* semi-transparente */
+  z-index: 9999;
+  /* sobre tudo */
+  justify-content: center;
+  align-items: center;
+}
+
+/* Conteúdo interno centralizado */
+#loadingModal .modal-content {
+  text-align: center;
+  background-color: #fff;
+  padding: 40px 60px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Spinner animado */
+#loadingModal .spinner {
+  border: 6px solid #f3f3f3;
+  /* fundo */
+  border-top: 6px solid #3498db;
+  /* cor do spinner */
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 20px auto;
+}
+
+/* Animação de rotação */
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Texto de aviso */
+#loadingModal p {
+  font-size: 1.1rem;
+  color: #333;
+  margin: 0;
+}
+
+/* ==============================
+   RESPONSIVO
+================================= */
+@media (max-width: 800px) {
+  #projectContainer {
+    flex-direction: column;
+  }
+}
+
+
+/*   generate content */
+
+#docGeneratorSection {
+  margin-top: 20px;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: #f8f9fa;
+}
+
+#docGeneratorSection h3 {
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.doc-buttons {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+#generatedDocContainer {
+  display: none;
+  flex-direction: column;
+}
+
+#generatedDocOutput {
+  width: 100%;
+  height: 300px;
+  font-family: monospace;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 10px;
+  resize: vertical;
+}
+
+
+/*  MODAL GENEREATE README */
+
+/* ===== Modal base ===== */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+/* ===== Conteúdo do modal ===== */
+.modal-content {
+  background-color: #fefefe;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 20px;
+  border-radius: 12px;
+  width: 400px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+
+/* ===== Fechar ===== */
+.close {
+  float: right;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+select[multiple] {
+  width: 100%;
+  height: 160px;
+  padding: 5px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background-color: #f8f9fa;
+  font-size: 14px;
+}
+
+/* ===== Botão de gerar ===== */
+#generateReadmeBtn {
+  margin-top: 15px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+  width: 100%;
+}
+
+#generateReadmeBtn:hover {
+  background-color: #0069d9;
+}
+
+/* ===== Resultado ===== */
+#readmeOutput {
+  width: 100%;
+  height: 300px;
+  margin-top: 10px;
+  font-family: monospace;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  padding: 10px;
+  background: #f8f9fa;
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 10px 0 15px 0;
+}
+
+.checkbox-group label {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.checkbox-group label:hover {
+  background: #f8f9fa;
+  border-color: #ccc;
+}
+
+.checkbox-group input[type="checkbox"] {
+  margin-right: 10px;
+  accent-color: #007bff;
+}
+
+
+
+/* ==============================
+   README RESULTADO / VISUALIZAÇÃO
+================================= */
+
+#readmeResultContainer {
+  margin-top: 25px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.05);
+}
+
+.readme-tabs {
+  display: flex;
+  margin-bottom: 10px;
+  gap: 0;
+  border-bottom: 1px solid #ccc;
+}
+
+.readme-tabs .tab-btn {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  background: #f8f9fa;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 6px 6px 0 0;
+  border-bottom: none;
+  transition: background 0.2s;
+}
+
+.readme-tabs .tab-btn:hover {
+  background: #e8f2fc;
+}
+
+.readme-tabs .tab-btn.active {
+  background: #fff;
+  border-bottom: 2px solid #3498db;
+}
+
+.readme-tab {
+  display: none;
+}
+
+.readme-tab.active {
+  display: block;
+}
+
+#readmeOutput {
+  width: 100%;
+  height: 600px;
+  /* 👈 área grande */
+  font-family: monospace;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  padding: 10px;
+  resize: vertical;
+  background: #f8f9fa;
+}
+
+#readmePreview {
+  max-height: 600px;
+  overflow-y: auto;
+  padding: 20px;
+  background: #1e1e1e;
+  /* fundo escuro */
+  border: 1px solid #333;
+  border-radius: 8px;
+  color: #ddd;
+  /* texto claro */
+}
+
+/* Estilo leve pro conteúdo renderizado */
+#readmePreview h1,
+#readmePreview h2,
+#readmePreview h3 {
+  color: #fff;
+  border-bottom: 1px solid #444;
+  padding-bottom: 4px;
+}
+
+#readmePreview pre {
+  background: #2d2d2d;
+  color: #f8f8f2;
+  padding: 10px;
+  border-radius: 6px;
+  overflow-x: auto;
+}
+
+#readmePreview code {
+  background: #333;
+  color: #ffb86c;
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+
+
+/* Links */
+#readmePreview a {
+  color: #61afef;
+}
+
+/* Listas */
+#readmePreview li {
+  color: #ddd;
+}
+
+/* Tabelas */
+#readmePreview table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+#readmePreview th,
+#readmePreview td {
+  border: 1px solid #444;
+  padding: 6px;
+}
+
+#readmePreview th {
+  background: #2d2d2d;
+  color: #fff;
+}
+
+/* --------------------------- btns update */
+
+/* Estado desabilitado visual */
+.btn-disabled {
+  background-color: #c7c7c7 !important;
+  color: #666 !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
+}
+
+/* Criar README quando já existe */
+.btn-small {
+  padding: 4px 10px !important;
+  font-size: 12px !important;
+}
+
+/* Mensagem visual */
+.readme-status {
+  margin-top: 8px;
+  font-size: 14px;
+  color: #444;
+}
+
+/*  apply button */
+.apply-btn {
+  background-color: #4caf50;
+  /* verde suave */
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+  margin-top: 10px;
+}
+
+.apply-btn:hover {
+  background-color: #45a049;
+  transform: scale(1.02);
+}
+
+.apply-btn:active {
+  background-color: #3d8b41;
+  transform: scale(0.98);
+}
+
+.apply-btn:disabled {
+  background-color: #9e9e9e;
+  cursor: not-allowed;
+  transform: none;
+}
+
+
+/*  update modal */
+.update-modal {
+  max-width: 500px;
+  width: 90%;
+}
+
+.nested {
+  margin-left: 25px;
+  display: flex;
+  gap: 10px;
+  margin-top: 5px;
+}
+
+.nested input {
+  width: 150px;
+}
+
+
+/*   comparação entre os dois readmes */
+
+.two-cols {
+  display: flex;
+  gap: 20px;
+}
+
+.diff-col {
+  width: 50%;
+  background: #ffffff;
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+}
+
+.dual-tab {
+  display: none;
+}
+
+.dual-tab.active {
+  display: block;
+}
+
+#oldReadmeOutput,
+#newReadmeOutput {
+  width: 100%;
+  height: 500px;
+  white-space: pre;
+  font-family: monospace;
+}
+
+/* Preview Markdown Dark Theme */
+.readme-preview {
+  background-color: #0d1117;
+  color: #c9d1d9;
+  padding: 20px;
+  border-radius: 8px;
+  overflow-x: auto;
+  font-size: 15px;
+}
+
+.readme-preview h1,
+.readme-preview h2,
+.readme-preview h3,
+.readme-preview h4 {
+  color: #ffffff;
+  border-bottom: 1px solid #30363d;
+  padding-bottom: 4px;
+}
+
+.readme-preview a {
+  color: #58a6ff;
+}
+
+.readme-preview pre {
+  background: #161b22;
+  padding: 12px;
+  border-radius: 6px;
+  overflow-x: auto;
+}
+
+.readme-preview code {
+  background: #161b22;
+  padding: 4px 6px;
+  border-radius: 4px;
+}
+
+.readme-preview blockquote {
+  border-left: 4px solid #3b434b;
+  padding-left: 10px;
+  color: #8b949e;
+}
+
+.readme-preview table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.readme-preview table th,
+.readme-preview table td {
+  border: 1px solid #30363d;
+  padding: 6px 10px;
+}
+
+.readme-preview img {
+  max-width: 100%;
+  border-radius: 6px;
+}
+
+
+/* download button */
+.download-btn {
+  margin-top: 10px;
+  background: #2d8cff;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.download-btn:hover {
+  background: #1f6cd1;
+}
+
+/*   */
+
+.modal-bg {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  justify-content: center;
+  align-items: center;
+}
+
+.modal-box {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  width: 450px;
+  color: #fff;
+  color: black
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 15px;
+}
+
+.btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.btn.cancel {
+  background: #555;
+}
+
+.btn.confirm {
+  background: #007bff;
+  color: white;
+}
+
+#commitMessage {
+  width: 100%;
+  height: 120px;
+  margin-top: 10px;
+}
+
+
+/* modal de confirmação*/
+
+/*  */
+/*  */
+/* ==============================
+   MODAL DE CONFIRMAÇÃO DO COMMIT
+================================= */
+
+#commitConfirmModal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 9999;
+  justify-content: center;
+  align-items: center;
+}
+
+#commitConfirmModal .modal-box {
+  background: #ffffff;
+  width: 420px;
+  padding: 25px 30px;
+  border-radius: 12px;
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.25);
+  animation: scaleIn 0.15s ease-out;
+}
+
+#commitConfirmModal h3 {
+  margin-top: 0;
+  font-size: 20px;
+  color: #2c3e50;
+}
+
+#commitConfirmModal p {
+  margin-top: 10px;
+  margin-bottom: 20px;
+  color: #444;
+  font-size: 15px;
+}
+
+/* botões */
+#commitConfirmModal .button-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* botão desfazer */
+.undo-btn {
+  background-color: #e74c3c;
+  color: white;
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: none;
+  font-weight: bold;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.undo-btn:hover {
+  background-color: #c0392b;
+}
+
+.undo-btn:active {
+  transform: scale(0.97);
+}
+
+/* botão finalizar */
+.close-btn {
+  background-color: #3498db;
+  color: white;
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: none;
+  font-weight: bold;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.close-btn:hover {
+  background-color: #2980b9;
+}
+
+.close-btn:active {
+  transform: scale(0.97);
+}
+
+/* animação suave */
+@keyframes scaleIn {
+  from {
+    transform: scale(0.92);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+
+.alert-mockup {
+  background-color: #f5f7fa;
+  color: #2c3e50;
+  border-left: 4px solid #f39c12;
+  padding: 10px 14px;
+  font-size: 14px;
+}
+
+
+#projectsHeader {
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#projectsArrow {
+  font-size: 14px;
+  transition: transform 0.2s ease;
+}
+
+#projectsArrow.collapsed {
+  transform: rotate(-90deg);
+}
+
+.saved-project.hidden {
+  display: none;
+}
+
+.saved-project.selected {
+  border: 2px solid #3498db;
+  background-color: #eef6fd;
+}

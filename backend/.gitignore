@@ -1,0 +1,19 @@
+.env
+
+venv
+.venv
+
+# Ignora diretórios de cache do Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+./repositories
+repositories
+
+./data
+/data/
+
+app/output/*
+
+prompts/template_debug.txt

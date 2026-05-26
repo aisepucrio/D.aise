@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Gerenciador de Prompts</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/prompts.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/header.css') }}">
+
+</head>
+
+<body>
+    {% set header_extra_class = 'app-header-prompts' %}
+    {% include "components/header.html" %}
+
+    <div class="container">
+        <!-- A parte de configuração de modelos deve ser editado no arquivo
+         configModels.html
+        -->
+        <!-- {% include "components/configModels.html" %} -->
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Prompts</h2>
+                <button onclick="openCreateNewPrompt()">+ Novo</button>
+            </div>
+
+            <!-- <input type="text" id="search-prompts" placeholder="Buscar prompt..." oninput="searchPrompts()" /> -->
+            <select id="prompt-filter" onchange="filterPrompts()">
+                <option value="all">All</option>
+                <option value="analyze_project">Analyze Project</option>
+                <option value="create_readme">Create README</option>
+                <option value="update_readme">Update README</option>
+            </select>
+            <ul id="prompt-list">
+
+                <li class="prompt-group">
+                    <div class="prompt-group-header" onclick="togglePromptGroup('create_readme')">
+                        <span>Create README XX</span>
+                        <span class="chevron">▾</span>
+                    </div>
+
+                    <ul class="prompt-group-items" data-type="create_readme">
+                        <li class="prompt-item">...</li>
+                        <li class="prompt-item">...</li>
+                    </ul>
+                </li>
+
+            </ul>
+
+        </aside>
+
+        <!-- Conteúdo principal -->
+        <!-- criar prompt -->
+        <main class="content">
+            <div class="content-header">
+                <h1 id="form-title">Create new prompt</h1>
+                <input type="hidden" id="prompt-id" />
+                <p id="prompt-id-display" class="prompt-id-display hidden"></p>
+
+                <!-- Nome -->
+                <input type="text" id="prompt-name" placeholder="Prompt name" onchange="onPromptFieldChange()" />
+
+                <!-- Tipo -->
+                <!-- <select id="prompt-type" onchange="onPromptFieldChange()"> -->
+                <select id="prompt-type" onchange="onPromptTypeChange()">
+
+                    <option value="">Prompt type</option>
+                    <option value="analyze_project">Analyze Project</option>
+                    <option value="create_readme">Create README</option>
+                    <option value="update_readme">Update README</option>
+                </select>
+
+                <!-- Ativo -->
+                <label class="default-checkbox hidden">
+                    <input type="checkbox" id="prompt-active" checked onchange="onPromptFieldChange()" />
+                    Active
+                </label>
+            </div>
+
+            <!-- Descrição -->
+            <textarea id="prompt-description" placeholder="Short description of what this prompt does" rows="2"
+                oninput="onPromptFieldChange()"></textarea>
+
+            <!-- Conteúdo do prompt -->
+            <!-- <textarea id="prompt-content" placeholder="Write the prompt content here..."
+                oninput="onPromptFieldChange()"></textarea> -->
+            <div class="prompt-editor-wrapper">
+                <textarea id="prompt-content" placeholder="Write the prompt content here..."
+                    oninput="onPromptContentChange()"></textarea>
+
+                <div class="prompt-variables-box">
+                    <h4>Required variables</h4>
+                    <ul id="prompt-variables-list"></ul>
+                </div>
+            </div>
+
+
+            <div class="content-footer">
+                <button class="danger" onclick="deletePrompt()" id="delete-prompt-btn">Delete</button>
+                <button class="primary" onclick="savePrompt()">Save</button>
+            </div>
+        </main>
+
+    </div>
+
+    <!-- Default confirmation modal -->
+    <div id="default-confirm-modal" class="modal-overlay hidden">
+        <div class="modal">
+            <h3>Change default prompt?</h3>
+            <p id="default-confirm-text"></p>
+
+            <div class="modal-actions">
+                <button class="secondary" onclick="closeDefaultModal()">Cancel</button>
+                <button class="primary" onclick="confirmSetDefault()">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/prompts.js') }}"></script>
+</body>
+
+</html>

@@ -1,0 +1,299 @@
+/* =============================================================================
+   PÁGINA: /models (Modelos de LLM)
+   Carregar depois de: style.css, header.css
+   ============================================================================= */
+
+body.page-config-models {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #fff;
+  color: #333;
+}
+
+.config-models-container {
+  flex: 1;
+  width: 100%;
+  padding: 24px 32px 40px;
+  box-sizing: border-box;
+}
+
+/* Formulário em largura confortável, sem “card” */
+.config-llm {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.config-llm-header {
+  margin-bottom: 28px;
+}
+
+.config-llm-title {
+  margin: 0 0 8px 0;
+  font-size: 1.5rem;
+  color: #2c3e50;
+  font-weight: 600;
+}
+
+.config-llm-subtitle {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #555;
+  line-height: 1.45;
+}
+
+.config-llm-form .config-llm-field {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 18px;
+}
+
+.config-llm-form label,
+.config-llm-label-block {
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #555;
+  font-size: 0.95rem;
+}
+
+.config-llm-label-block {
+  display: block;
+}
+
+.config-llm-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.config-llm-label-hint {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+/* Largura única para select, inputs e temperatura */
+.config-llm-control-full {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.config-llm-select,
+.config-llm-input {
+  padding: 10px 14px;
+  border: 1px solid #ced4da;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  background-color: #fff;
+  color: #1f2937;
+}
+
+.config-llm-select:focus,
+.config-llm-input:focus {
+  border-color: #3498db;
+  box-shadow: 0 0 4px rgba(52, 152, 219, 0.25);
+}
+
+.config-llm-input--error {
+  border-color: #e74c3c !important;
+  box-shadow: 0 0 4px rgba(231, 76, 60, 0.25) !important;
+}
+
+.config-llm-input.token-default {
+  color: #9ca3af;
+}
+
+.config-llm-select {
+  cursor: pointer;
+  appearance: auto;
+}
+
+/* Temperatura — input number nativo com spinners visíveis (protótipo) */
+.temperature-field {
+  text-align: left;
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.config-llm-inline-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.config-llm-field--inline {
+  margin-bottom: 0;
+}
+
+/* Painel credenciais */
+.credential-dynamic {
+  margin-bottom: 18px;
+  transition: opacity 0.25s ease-in-out;
+}
+
+.credential-dynamic--fade {
+  opacity: 0.35;
+}
+
+.api-keys-rows,
+.ollama-endpoint-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Linha: campo + coluna (mensagem “Salvo” + botão) */
+.credential-inline-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  width: 100%;
+}
+
+.credential-inline-row .config-llm-input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Coluna: “Salvo” acima do botão circular */
+.credential-btn-wrap {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 44px;
+}
+
+.credential-saved-msg {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #555;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.credential-saved-msg[hidden] {
+  display: none !important;
+}
+
+.credential-saved-msg-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #555;
+}
+
+.credential-saved-msg-icon svg {
+  display: block;
+}
+
+/* Botão circular: + ou check — conteúdo centralizado (grid sobreposto) */
+button.btn-credential-action {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid #bdc3c7;
+  border-radius: 50%;
+  background-color: #ecf0f1;
+  color: #1a1a1b;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease, opacity 0.2s ease,
+    transform 0.1s ease;
+  display: grid;
+  place-items: center;
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+}
+
+button.btn-credential-action:hover:not(:disabled) {
+  background-color: #dfe6e9;
+}
+
+button.btn-credential-action:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+button.btn-credential-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Estado “salvo”: botão com check (disabled no JS) — manter contraste normal */
+button.btn-credential-action.btn-credential-action--saved:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.btn-credential-inner {
+  grid-column: 1;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.btn-credential-inner[hidden] {
+  display: none !important;
+}
+
+.btn-credential-inner--plus {
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 0;
+  /* Ajuste óptico para centralizar o “+” no círculo */
+  padding-bottom: 2px;
+}
+
+.btn-credential-inner--check {
+  color: #1a1a1b;
+}
+
+.btn-credential-check-svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+.config-llm-actions {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-end;
+}
+
+button.btn-save-llm {
+  background-color: #3498db;
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+button.btn-save-llm:hover {
+  background-color: #2980b9;
+}
+
+button.btn-save-llm:active {
+  transform: scale(0.98);
+}

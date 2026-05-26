@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>Example Flask</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/header.css') }}" />
+
+  <!-- <script src="index.js"></script> -->
+  <!-- <script src="{{ url_for('static', filename='js/index.js') }}" defer></script> -->
+  <!-- coloque ANTES do seu index.js -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <script>
+    window.USE_LLM = {{ USE_LLM | tojson }};
+  </script>
+  <script src="{{ url_for('static', filename='js/index.js') }}" defer></script>
+
+</head>
+
+<body>
+  {% include "components/header.html" %}
+
+  <!-- <button onclick="callProjectControl()">Call Project Control</button> -->
+  <div class="home-actions-row">
+    <button type="button" onclick="callSelectFolder()">Select Project</button>
+    <div class="home-import-stack">
+      <button type="button" onclick="openGithubImportModal()">Import from Github</button>
+
+      <div id="githubTokenAccordion" class="github-token-accordion">
+        <button type="button" class="github-token-accordion-header" id="githubTokenAccordionHeader"
+          aria-expanded="false" aria-controls="githubTokenPanel" onclick="toggleGithubTokenAccordion()">
+          GitHub Token <span class="github-token-accordion-arrow collapsed" id="githubTokenAccordionArrow" aria-hidden="true">▼</span>
+        </button>
+        <div id="githubTokenPanel" class="github-token-panel" role="region" aria-labelledby="githubTokenAccordionHeader" hidden>
+          <p class="github-token-help">
+            Necessário para repositórios privados e para enviar o README ao GitHub.
+          </p>
+          <label class="github-token-field-label" for="mainGithubTokenInput">Token</label>
+          <div class="github-token-input-row">
+            <div class="github-token-input-shell">
+              <input type="password" id="mainGithubTokenInput" class="github-token-input"
+                placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off" />
+              <button type="button" class="github-token-eye-inside" id="btnToggleGithubTokenVisibility"
+                onclick="toggleMainGithubTokenVisibility()" aria-label="Mostrar token" title="Mostrar token">
+                <span class="github-token-eye-slot" aria-hidden="true">
+                  <span class="github-token-eye-layer" id="githubTokenEyeVisible" hidden>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  </span>
+                  <span class="github-token-eye-layer" id="githubTokenEyeHidden">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                      <line x1="1" y1="1" x2="23" y2="23" />
+                    </svg>
+                  </span>
+                </span>
+              </button>
+            </div>
+            <button type="button" class="github-token-save-circle" id="btnSaveMainGithubToken" onclick="saveGithubToken()"
+              disabled aria-label="Salvar token">
+              <span class="github-token-save-icon" id="githubTokenSaveIcon" aria-hidden="true">+</span>
+            </button>
+            <button type="button" class="github-token-clear-circle" id="btnClearGithubToken" onclick="clearGithubToken()"
+              disabled aria-label="Remover token salvo" title="Remover token">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                <line x1="10" y1="11" x2="10" y2="17" />
+                <line x1="14" y1="11" x2="14" y2="17" />
+              </svg>
+            </button>
+          </div>
+          <p class="github-token-link-wrap">
+            Precisa de um token? <a href="https://github.com/settings/tokens" target="_blank" rel="noopener">Gerar no Github</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr />
+
+  <!-- <p><strong>Project Result:</strong></p>
+      <div id="projectResult" style="font-weight: bold; color: blue"></div>
+
+      <p><strong>Selected Folder:</strong></p>
+      <div id="folderResult" style="font-weight: bold; color: green"></div> -->
+
+  <!-- agora é pra criar a lista de projetos salvos -->
+  <div id="savedProjectsContainer">
+    <!-- <h2>Projetos Salvos</h2>
+      -->
+    <h2 id="projectsHeader">
+      Projetos Salvos <span id="projectsArrow">▼</span>
+    </h2>
+
+    <div id="savedProjectsList"></div>
+  </div>
+
+  <!-- Área flexível que aparece após o fetch -->
+  <div id="projectContainer">
+    <div class="column">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px;">
+        <h3 style="margin:0;">Estrutura do Projeto</h3>
+        <button id="btnRefreshTree" onclick="refreshTree()" style="display:none; font-size:0.75rem; padding:3px 10px;">&#8635; Atualizar árvore</button>
+        <span id="refreshTreeMsg" style="display:none; font-size:0.75rem; color: var(--color-text-secondary, #888);"></span>
+      </div>
+
+      <div class="tab-container">
+        <div class="tab-header">
+          <button class="tab-btn active" onclick="openTab(event, 'treeTab')">
+            Tree
+          </button>
+          <!-- manter esse button comentado  -->
+          <!-- <button class="tab-btn" onclick="openTab(event, 'diffTab')">
+            Diff
+          </button> -->
+        </div>
+
+        <div id="treeTab" class="tab-content active">
+          <pre id="projectTree" style="white-space: pre; font-family: monospace"></pre>
+        </div>
+
+        <div id="diffTab" class="tab-content">
+          <pre id="diffView" style="white-space: pre; font-family: monospace; color: #444">
+          Nenhum diff carregado ainda.
+        </pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="column">
+      <h3>Informações do Projeto</h3>
+
+      <input type="hidden" id="id" />
+
+      <div class="form-field" id="pathField">
+        <label for="path">Path:</label>
+        <input id="path" type="text" readonly class="readonly-input" />
+        <div class="form-field-actions">
+          <button type="button" class="copy-btn" title="Copy to clipboard"
+            onclick="copyInputValue('path')">
+            <span class="copy-icon" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+            </span>
+            Copy
+          </button>
+          <button id="openExplorerBtn" class="action-btn" title="Abrir no Explorer"
+            onclick="callOpenFolderInExplorer(document.getElementById('path').value)">
+            🗁 Open folder
+          </button>
+        </div>
+      </div>
+
+      <div class="form-field" id="folderNameField">
+        <label for="folder_name">Folder name:</label>
+        <input id="folder_name" type="text" readonly class="readonly-input" />
+        <input id="project_source" type="hidden" value="" />
+        <div class="form-field-actions">
+          <button type="button" class="copy-btn" title="Copy to clipboard"
+            onclick="copyInputValue('folder_name')">
+            <span class="copy-icon" aria-hidden="true">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+            </span>
+            Copy
+          </button>
+        </div>
+      </div>
+
+      <div class="form-field">
+        <label for="name">Name of Project:</label>
+        <input id="name" type="text" />
+      </div>
+
+      <div class="form-field">
+        <label for="description">Description:</label>
+        <!-- <input id="description" type="text" readonly /> -->
+        <textarea id="description" rows="4"></textarea>
+      </div>
+
+      <div class="form-field">
+        <label for="language">Language:</label>
+        <input id="language" type="text" />
+      </div>
+
+      <div class="form-field">
+        <label for="framework">Framework:</label>
+        <input id="framework" type="text" />
+      </div>
+
+      <div class="form-field">
+        <label for="dependence_file_name">Dependence File:</label>
+        <input id="dependence_file_name" type="text" />
+      </div>
+
+      <div class="form-field">
+        <label for="main_file">Main File:</label>
+        <input id="main_file" type="text" />
+      </div>
+
+      <div class="form-field">
+        <label for="has_readme">Possui readme</label>
+        <input id="has_readme" type="text" />
+      </div>
+
+      <button onclick="callSaveProject()">Salvar projeto</button>
+      <button onclick="callAnalyzeRepositoryWithLLM()">
+        Analyze with LLM
+      </button>
+      <hr />
+
+      <div id="docGeneratorSection">
+        <h3>📄 Generate Documentation"</h3>
+
+        <div class="doc-buttons">
+          <button id="createReadmeBtn" onclick="onCreateReadmeClick()">
+            📝 Create README
+          </button>
+
+          <button id="updateReadmeBtn" onclick="onUpdateReadmeClick()">
+            🔄 Update README
+          </button>
+        </div>
+
+        <p id="readmeStatusMessage" class="readme-status"></p>
+
+
+        <div id="generatedDocContainer">
+          <h4 id="generatedDocTitle"></h4>
+          <textarea id="generatedDocOutput" readonly></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Import from Github -->
+  <div id="githubImportModal" class="modal">
+    <div class="modal-content" style="max-width:480px;">
+      <span class="close" onclick="closeGithubImportModal()">&times;</span>
+      <h3>Import from Github</h3>
+
+      <div class="form-field" style="margin-top:16px;">
+        <label for="githubUrlInput">Repository URL</label>
+        <input
+          type="text"
+          id="githubUrlInput"
+          placeholder="https://github.com/usuario/repositorio"
+          style="width:100%; box-sizing:border-box;"
+        />
+      </div>
+
+      <p class="import-modal-hint" role="status">
+        <span class="import-modal-hint-icon" aria-hidden="true">!</span>
+        <span class="import-modal-hint-text">Reposit&oacute;rios privados: configure o token no painel <strong>GitHub Token</strong> abaixo.</span>
+      </p>
+
+      <div style="display:flex; gap:8px; align-items:center; margin-top:20px;">
+        <button onclick="importFromGithub()" id="btnImportGithub">Analyze via github API</button>
+        <button onclick="cloneFromGithub()" id="btnImportGithub">Clone and import</button>
+        <span id="githubImportLoading" style="display:none; font-size:0.85rem;">Importing...</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de carregamento -->
+  <div id="loadingModal">
+    <div class="modal-content">
+      <div class="spinner"></div>
+      <p>Processing project, please wait...</p>
+    </div>
+  </div>
+  <!-- modal de criar readme -->
+
+  <div id="readmeModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeReadmeModal()">&times;</span>
+      <h3>Generate README</h3>
+      <p>Select the information you want to include in the README generation:</p>
+
+      <form id="readmeForm" class="checkbox-group">
+        <label><input type="checkbox" value="name" /> Project name</label>
+        <!-- <label><input type="checkbox" value="folder_name" /> Nome da Pasta</label> -->
+        <label><input type="checkbox" value="description" />Description</label>
+        <label><input type="checkbox" value="language" />Language</label>
+        <label><input type="checkbox" value="framework" />Framework</label>
+        <label><input type="checkbox" value="tree" checked />Tree</label>
+        <label><input type="checkbox" value="title_description" />Commits (title and description)</label>
+        <label><input type="checkbox" value="diffs" />Commits (Diff)</label>
+        <label><input type="checkbox" value="dependence_file_name" checked />Dependence file</label>
+        <!-- <label><input type="checkbox" value="main_file" /> Arquivo
+          Principal</label> -->
+        <!-- <label><input type="checkbox" value="has_readme" />README existente</label> -->
+      </form>
+
+      <button id="generateReadmeBtn" onclick="generateReadme()">
+        Generate README
+      </button>
+    </div>
+  </div>
+
+  <!-- Resultado -->
+  <!-- Resultado -->
+  <div id="readmeResultContainer" style="display: none; margin-top: 30px">
+    <h3>📘 README generated</h3>
+
+    <div class="readme-tabs">
+      <button class="tab-btn active" onclick="openReadmeTab(event, 'rawTab')">
+        Markdown
+      </button>
+      <button class="tab-btn" onclick="openReadmeTab(event, 'previewTab')">
+        Preview
+      </button>
+    </div>
+
+    <div id="rawTab" class="readme-tab active">
+      <textarea id="readmeOutput"></textarea>
+    </div>
+
+    <div id="previewTab" class="readme-tab">
+      <div id="readmePreview"></div>
+    </div>
+
+    <!-- <button class="apply-btn">Aplicar README ao projeto</button> -->
+
+    <!-- <button class="apply-btn" onclick="openConfirmSaveModal('readmeOutput')">Aplicar esse README ao projeto</button> -->
+
+    <button class="apply-btn" onclick="openConfirmSaveModal('readmeOutput')">Apply this README to the project</button>
+    <button class="download-btn" onclick="downloadReadme('readmeOutput')">Download Markdown</button>
+
+  </div>
+
+  <!-- Modal de conflito quando README já existe -->
+  <div id="readmeConflictModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeReadmeConflictModal()">&times;</span>
+
+      <h3>README already exists</h3>
+      <p>Choose how you want to proceed:</p>
+
+      <form id="readmeActionForm" class="checkbox-group">
+        <!-- <label><input type="radio" name="readmeAction" value="overwrite" checked> Sobrescrever README</label>
+        <label><input type="radio" name="readmeAction" value="update"> Atualizar README existente</label>
+        <label><input type="radio" name="readmeAction" value="parallel"> Criar README separado</label> -->
+        <label><input type="radio" name="readmeAction" value="overwrite" checked> Overwrite README</label>
+        <label><input type="radio" name="readmeAction" value="update"> Update existing README</label>
+        <label><input type="radio" name="readmeAction" value="parallel"> Create separate README</label>
+        ``` ✅
+
+      </form>
+
+      <button onclick="continueReadmeCreation()">Continue</button>
+    </div>
+  </div>
+
+  <!-- Modal de Update README -->
+  <!-- Modal de Update README -->
+  <div id="updateReadmeModal" class="modal">
+    <div class="modal-content update-modal">
+      <span class="close" onclick="closeUpdateReadmeModal()">&times;</span>
+      <h3>Update README </h3>
+
+      <!-- esses checks aqui -->
+      <h4>Commits</h4>
+      <div class="checkbox-group">
+        <!-- <label><input type="checkbox" value="title_description" checked> Título + descrição</label>
+        <label><input type="checkbox" value="diffs" checked> Diffs do commit</label> -->
+        <label><input type="checkbox" class="commit-option" value="title_description" checked> Title +
+          Description</label>
+        <label><input type="checkbox" class="commit-option" value="diffs" checked>Commit diffs</label>
+
+      </div>
+
+      <h4>Commit range</h4>
+      <div class="checkbox-group">
+        <label>
+          <input type="radio" name="range_type" value="since_last_readme" checked>
+          <!-- Desde a última modificação do README
+            -->
+          Since the last modification of the README
+        </label>
+
+        <label>
+          <input type="radio" name="range_type" value="date_range">
+          <!-- Intervalo de datas -->
+          Date range
+        </label>
+        <div class="nested">
+          <input type="date" id="start_date">
+          <input type="date" id="end_date">
+        </div>
+
+        <!-- <label>
+          <input type="radio" name="range_type" value="hash_range">
+          Intervalo por hash
+        </label>
+        <div class="nested">
+          <input type="text" id="start_hash" placeholder="Commit inicial">
+          <input type="text" id="end_hash" placeholder="Commit final">
+        </div> -->
+      </div>
+
+      <!-- <h4>Outros recursos</h4> -->
+      <h4>Other resources</h4>
+      <div class="checkbox-group">
+        <!-- <label><input type="checkbox" value="dependency_files" checked> Usar arquivos de dependências</label> -->
+        <label><input type="checkbox" id="use_name" value="name">Project name</label>
+        <label><input type="checkbox" id="use_description" value="description">Description</label>
+        <label><input type="checkbox" id="use_language" value="language">Language</label>
+        <label><input type="checkbox" id="use_framework" value="language">Framework</label>
+
+        <label><input type="checkbox" id="dependency_files" value="dependency_files" checked>Dependence file</label>
+      </div>
+
+      <button class="apply-btn" onclick="submitUpdateReadme()">Update README</button>
+    </div>
+  </div>
+
+  <div id="readmeDiffContainer" style="display:none; margin-top:40px;">
+
+    <h3>📘 Comparação de READMEs</h3>
+
+    <div class="two-cols">
+
+      <!-- ===== COLUNA OLD README ===== -->
+      <div class="diff-col">
+        <h4>README Antigo</h4>
+
+        <div class="readme-tabs">
+          <button class="tab-btn active" onclick="openDualTab(event, 'oldRawTab')">Markdown</button>
+          <button class="tab-btn" onclick="openDualTab(event, 'oldPreviewTab')">Preview</button>
+        </div>
+
+        <div id="oldRawTab" class="readme-tab dual-tab active">
+          <textarea id="oldReadmeOutput"></textarea>
+        </div>
+
+        <div id="oldPreviewTab" class="readme-tab dual-tab">
+          <div id="oldReadmePreview" class="readme-preview"></div>
+
+        </div>
+        <!-- <button class="apply-btn">Salvar esse README</button> -->
+        <button class="apply-btn" onclick="openConfirmSaveModal('oldReadmeOutput')">Aplicar esse README ao
+          projeto</button>
+
+        <button class="download-btn" onclick="downloadReadme('oldReadmeOutput')">Download Markdown</button>
+
+      </div>
+
+      <!-- ===== COLUNA UPDATED README ===== -->
+      <div class="diff-col">
+        <h4>README Atualizado</h4>
+
+        <div class="readme-tabs">
+          <button class="tab-btn active" onclick="openDualTab(event, 'newRawTab')">Markdown</button>
+          <button class="tab-btn" onclick="openDualTab(event, 'newPreviewTab')">Preview</button>
+        </div>
+
+        <div id="newRawTab" class="readme-tab dual-tab active">
+          <textarea id="newReadmeOutput"></textarea>
+        </div>
+
+        <div id="newPreviewTab" class="readme-tab dual-tab">
+          <div id="newReadmePreview" class="readme-preview"></div>
+        </div>
+        <!-- <button class="apply-btn">Salvar esse README</button> -->
+
+        <button class="apply-btn" onclick="openConfirmSaveModal('newReadmeOutput')">Apply this README to the
+          project</button>
+        <button class="download-btn" onclick="downloadReadme('newReadmeOutput')">Download Markdown</button>
+
+      </div>
+
+    </div>
+
+
+    <!-- ===== MODAL PARA SALVAR README ===== -->
+
+
+  </div>
+  <div id="confirmSaveModal" class="modal-bg">
+    <div class="modal-box">
+
+      <div id="githubApplyReadmeTokenBanner" class="alert-banner-warning" role="alert" style="display:none;">
+        ⚠️ Para aplicar as alterações diretamente no GitHub, certifique-se de ter configurado o seu Token na tela principal.
+      </div>
+
+      <!-- PASSO 1: CONFIRMAR SALVAMENTO -->
+      <div id="saveStep">
+        <h3>Save README in project?</h3>
+        {% if not USE_LLM %}
+        <div class="alert-mockup">
+          <strong> ⚠️ LLM disabled (mock mode)</strong>
+        </div>
+        <p>This will <strong>NOT</strong> overwrite the current file in the local repository because it is in <strong>
+            mockup mode</strong>.</p>
+        {% else %}
+        <p>This will overwrite the current file in the local repository.</p>
+        {% endif %}
+
+        <div class="modal-actions">
+          <button class="btn cancel" onclick="closeConfirmSaveModal()">Cancel</button>
+          <button class="btn confirm" onclick="applyReadmeOverwrite()">Confirm</button>
+        </div>
+      </div>
+
+      <!-- PASSO 2: TELA DE COMMIT -->
+      <div id="commitStep" style="display:none;">
+        Project saved successfully!
+        <h3>Do you want to commit the changes?</h3>
+        <input type="text" id="commitTitle" id="readmeToSave" placeholder="título do commit" />
+        <textarea id="commitMessage" placeholder="Mensagem do commit..."></textarea>
+
+        <div class="modal-actions">
+          <button class="btn cancel" onclick="closeConfirmSaveModal()">Cancel</button>
+          <button class="btn confirm" onclick="submitCommit()">Commit</button>
+        </div>
+      </div>
+
+
+
+
+
+    </div>
+  </div>
+
+
+  <!-- PASSO 3: confirmaçao DE COMMIT -->
+  <!-- Modal de confirmação após commit -->
+  <div id="commitConfirmModal" class="modal-bg" style="display:none;">
+    <div class="modal-box">
+      <!-- <h3>Commit realizado!</h3> -->
+      <!-- <p>O commit foi concluído com sucesso. Deseja desfazer?</p> -->
+      <h3>Commit completed!</h3>
+      {% if not USE_LLM %}
+      <div class="alert-mockup">
+        <strong> ⚠️ LLM disabled (mock mode)</strong>
+      </div>
+      <p>mockup mode. changes was not really commited</p>
+      {% else %}
+      <p>The commit was successful. Do you want to undo it?</p>
+      {% endif %}
+      <div class="button-row">
+        <button class="undo-btn" onclick="undoCommit()">⟲ Undo Commit</button>
+        <button class="close-btn" onclick="closeCommitConfirmModal()">Finish</button>
+      </div>
+    </div>
+  </div>
+
+
+
+</body>
+
+</html>

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Modelos de LLM</title>
+    <!-- Ordem: global → header → página específica -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/header.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/configModels.css') }}">
+</head>
+
+<body class="page-config-models">
+    {% set header_extra_class = 'app-header-prompts' %}
+    {% include "components/header.html" %}
+
+    <main class="config-models-container">
+        {% include "components/configModels.html" %}
+    </main>
+    <script src="{{ url_for('static', filename='js/configModels.js') }}"></script>
+</body>
+
+</html>
