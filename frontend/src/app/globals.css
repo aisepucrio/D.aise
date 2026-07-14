@@ -41,6 +41,27 @@
   textarea:focus::placeholder {
     opacity: 0;
   }
+
+  /* Autofill: manter o tema escuro em TODOS os campos (input/textarea/select),
+     em qualquer estado — anula o fundo/texto claro forçado pelo WebKit */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  input:-webkit-autofill:active,
+  textarea:-webkit-autofill,
+  textarea:-webkit-autofill:hover,
+  textarea:-webkit-autofill:focus,
+  textarea:-webkit-autofill:active,
+  select:-webkit-autofill,
+  select:-webkit-autofill:hover,
+  select:-webkit-autofill:focus,
+  select:-webkit-autofill:active {
+    -webkit-text-fill-color: #f4f4f5; /* zinc-100, mesmo texto do tema */
+    -webkit-box-shadow: 0 0 0 1000px #0a0a0a inset; /* "pinta" o fundo escuro por cima */
+    box-shadow: 0 0 0 1000px #0a0a0a inset;
+    caret-color: #f4f4f5;
+    transition: background-color 9999s ease-in-out 0s; /* impede o flash claro do autofill */
+  }
 }
 
 /* Date inputs: native calendar icon in brand green (WebKit) */

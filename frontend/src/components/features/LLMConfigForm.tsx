@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   CheckCircle2,
   Eye,
@@ -51,6 +51,10 @@ export default function LLMConfigForm() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // true quando o usuário troca o provider (vs. troca disparada no load inicial),
+  // para auto-salvar só em mudanças intencionais.
+  const providerChangedByUser = useRef(false);
+
   // Load config + models on mount
   useEffect(() => {
     Promise.all([getLlmConfig(), getModels()])
@@ -92,44 +96,66 @@ export default function LLMConfigForm() {
           (models[provider] as ApiModelOption[] | undefined) ?? []
         ).map((m) => ({ value: m.value, label: m.label }));
         setModelOptions(opts);
-        setModel((current) => {
-          const exists = opts.some((o) => o.value === current);
-          return exists ? current : (opts[0]?.value ?? "");
-        });
+
+        // Resolve o modelo válido para o novo provider (mantém o atual se existir)
+        const exists = opts.some((o) => o.value === model);
+        const newModel = exists ? model : (opts[0]?.value ?? "");
+        setModel(newModel);
+
         // Reset credential field
+        let newCredential = "";
         if (provider === "ollama") {
-          setApiKey(savedConfig.ollama?.committedEndpoint ?? "");
+          newCredential = savedConfig.ollama?.committedEndpoint ?? "";
         } else if (provider === "gemini") {
-          setApiKey(savedConfig.gemini?.committedApiKey ?? "");
+          newCredential = savedConfig.gemini?.committedApiKey ?? "";
         } else if (provider === "openai") {
-          setApiKey(savedConfig.openai?.committedApiKey ?? "");
+          newCredential = savedConfig.openai?.committedApiKey ?? "";
+        }
+        setApiKey(newCredential);
+
+        // Auto-save apenas quando a troca foi feita pelo usuário (não no load),
+        // já com os valores resolvidos do novo provider.
+        if (providerChangedByUser.current) {
+          providerChangedByUser.current = false;
+          persist({ provider, model: newModel, apiKey: newCredential });
         }
       })
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [provider]);
 
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
+  // Salva a configuração. Aceita overrides para evitar usar estado defasado
+  // quando salvamos imediatamente após um setState (ex.: troca de modelo).
+  async function persist(
+    overrides?: Partial<{
+      provider: string;
+      model: string;
+      apiKey: string;
+      temperature: number;
+      tokens: number;
+    }>,
+  ) {
+    const cfg = { provider, model, apiKey, temperature, tokens, ...overrides };
+
     setIsSaving(true);
     setSaveSuccess(false);
     setError(null);
 
     const providerKey: Record<string, object> = {};
-    if (provider === "gemini") {
-      providerKey.gemini = { apiKey, committedApiKey: apiKey };
-    } else if (provider === "openai") {
-      providerKey.openai = { apiKey, committedApiKey: apiKey };
-    } else if (provider === "ollama") {
-      providerKey.ollama = { endpoint: apiKey, committedEndpoint: apiKey };
+    if (cfg.provider === "gemini") {
+      providerKey.gemini = { apiKey: cfg.apiKey, committedApiKey: cfg.apiKey };
+    } else if (cfg.provider === "openai") {
+      providerKey.openai = { apiKey: cfg.apiKey, committedApiKey: cfg.apiKey };
+    } else if (cfg.provider === "ollama") {
+      providerKey.ollama = { endpoint: cfg.apiKey, committedEndpoint: cfg.apiKey };
     }
 
     const payload: Partial<ApiLlmConfig> = {
       __lastSavedConfig: {
-        provider,
-        model,
-        temperature,
-        tokens: String(tokens),
+        provider: cfg.provider,
+        model: cfg.model,
+        temperature: cfg.temperature,
+        tokens: String(cfg.tokens),
       },
       ...providerKey,
     };
@@ -144,6 +170,25 @@ export default function LLMConfigForm() {
     } finally {
       setIsSaving(false);
     }
+  }
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    await persist();
+  }
+
+  // Salva automaticamente ao trocar de modelo (passa o novo valor direto,
+  // sem depender do setModel assíncrono).
+  function handleModelChange(value: string) {
+    setModel(value);
+    persist({ model: value });
+  }
+
+  // Troca de provider: marca como intencional; o efeito em [provider] resolve
+  // modelo/credencial e salva automaticamente.
+  function handleProviderChange(value: string) {
+    providerChangedByUser.current = true;
+    setProvider(value);
   }
 
   const isOllama = provider === "ollama";
@@ -176,7 +221,7 @@ export default function LLMConfigForm() {
           <Select
             id="llm-provider"
             value={provider}
-            onChange={setProvider}
+            onChange={handleProviderChange}
             options={PROVIDER_OPTIONS}
           />
         </div>
@@ -189,6 +234,7 @@ export default function LLMConfigForm() {
               type={showPassword ? "text" : "password"}
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
+              onBlur={() => persist()}
               placeholder={credentialPlaceholder}
               className="min-w-0 flex-1 border-0 bg-transparent px-4 py-2.5 text-sm font-medium text-foreground placeholder:text-muted focus:outline-none focus:ring-0"
               autoComplete="off"
@@ -225,7 +271,7 @@ export default function LLMConfigForm() {
             <Select
               id="llm-model"
               value={model}
-              onChange={setModel}
+              onChange={handleModelChange}
               options={modelOptions}
             />
           </div>
@@ -241,6 +287,7 @@ export default function LLMConfigForm() {
               step={0.1}
               value={temperature}
               onChange={(e) => setTemperature(Number(e.target.value))}
+              onBlur={() => persist()}
               className="w-full min-h-[2.75rem] rounded-lg border border-stroke bg-surface-input px-4 py-2.5 text-sm font-medium text-foreground shadow-sm transition-colors hover:border-zinc-700 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
             />
           </div>
@@ -250,6 +297,7 @@ export default function LLMConfigForm() {
               type="number"
               value={tokens}
               onChange={(e) => setTokens(Number(e.target.value))}
+              onBlur={() => persist()}
               className="w-full min-h-[2.75rem] rounded-lg border border-stroke bg-surface-input px-4 py-2.5 text-sm font-medium text-foreground shadow-sm transition-colors hover:border-zinc-700 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
             />
           </div>

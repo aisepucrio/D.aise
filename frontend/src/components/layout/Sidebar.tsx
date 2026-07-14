@@ -2,9 +2,9 @@
 
 import { Suspense, useEffect, useState } from "react";
 import {
+  useParams,
   usePathname,
   useRouter,
-  useSearchParams,
 } from "next/navigation";
 import {
   BookMarked,
@@ -25,8 +25,8 @@ import PromptLibraryPanel from "@/components/features/PromptLibraryPanel";
 function SidebarInner() {
   const pathname = usePathname();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const selectedProjectId = searchParams.get("id");
+  const params = useParams<{ id?: string }>();
+  const selectedProjectId = params.id ?? null;
 
   const [projectsOpen, setProjectsOpen] = useState(false);
   const [projects, setProjects] = useState<ApiProject[]>([]);
@@ -56,7 +56,7 @@ function SidebarInner() {
     if (selectedProjectId === folderName) {
       router.push("/projects");
     } else {
-      router.push(`/projects?id=${folderName}`);
+      router.push(`/projects/${encodeURIComponent(folderName)}`);
     }
   }
 

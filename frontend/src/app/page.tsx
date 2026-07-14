@@ -33,7 +33,7 @@ export default function Home() {
     try {
       const res = await chooseLocalRepository();
       if (res.project) {
-        router.push(`/projects?id=${res.project.folder_name}`);
+        router.push(`/projects/${encodeURIComponent(res.project.folder_name)}`);
       } else {
         setError(res.message ?? "Nenhuma pasta selecionada.");
       }
@@ -55,7 +55,7 @@ export default function Home() {
     try {
       const res = await importGithub(url);
       if (res.project) {
-        router.push(`/projects?id=${res.project.folder_name}`);
+        router.push(`/projects/${encodeURIComponent(res.project.folder_name)}`);
       } else {
         setError(res.message ?? "Erro ao importar repositório.");
       }
@@ -77,7 +77,7 @@ export default function Home() {
     try {
       const res = await cloneRepository(url);
       if (res.project) {
-        router.push(`/projects?id=${res.project.folder_name}`);
+        router.push(`/projects/${encodeURIComponent(res.project.folder_name)}`);
       } else {
         setError(res.message ?? "Erro ao clonar repositório.");
       }
