@@ -102,6 +102,8 @@ D.aise/
 - **npm** ≥ 9
 - **Git** ≥ 2.0
 
+> **Prefer containers?** You can skip all of the above and run everything with Docker — see [Running with Docker](#-running-with-docker).
+
 ### LLM Provider (choose one)
 
 | Provider | Requirement |
@@ -219,6 +221,60 @@ npm run dev
 ```
 
 Open your browser at `http://localhost:3000`.
+
+## 🐳 Running with Docker
+
+The fastest way to get the whole stack running — no Python venv, Node, or `python-tk` setup required. Docker builds and runs the backend (Flask) and frontend (Next.js) together.
+
+### Requirements
+
+- **Docker Engine** ≥ 24 (or Docker Desktop)
+- **Docker Compose v2** (the `docker compose` command, bundled with recent Docker)
+- The **Buildx** plugin (ships with Docker Desktop; on a standalone CLI install it via `brew install docker-buildx` and link it into `~/.docker/cli-plugins`)
+
+No local Python, Node, or Git installation is needed on the host — everything runs inside the containers.
+
+### Quick start
+
+From the repository root:
+
+```bash
+docker compose up --build
+```
+
+This builds both images and starts the services:
+
+| Service | URL | Container port → Host port |
+|---------|-----|----------------------------|
+| Frontend (Next.js) | http://localhost:3000 | 3000 → 3000 |
+| Backend (Flask API) | http://localhost:8765 | 8765 → 8765 |
+
+Open your browser at `http://localhost:3000`.
+
+To stop the stack, press `Ctrl+C`, or run `docker compose down` from another terminal. To run it detached, use `docker compose up --build -d`.
+
+### Configuration
+
+- **Backend `.env`** — the `backend` service reads `backend/.env` (same file used for the manual setup). Make sure it exists with at least `USE_LLM` and `DEBUG`. See [Backend environment variables](#backend-environment-variables).
+- **LLM providers, API keys, and the GitHub token** — configure them through the web UI exactly as in the manual setup. They are persisted to `backend/data/config/llm_config.json` on the host (see Volumes below), so they survive container restarts and rebuilds.
+- **Backend API URL** — the frontend reads `NEXT_PUBLIC_API_URL` at **build time** (the browser calls the API directly, so the URL must be reachable from your machine, not from inside the Docker network). It defaults to `http://localhost:8765`. To point the frontend at a different host/port, edit the `args` under the `frontend` service in `docker-compose.yml` and rebuild (`docker compose up --build`).
+
+### Volumes (persisted data)
+
+The following host directories are mounted into the backend container so data survives rebuilds:
+
+| Host path | Container path | Contents |
+|-----------|----------------|----------|
+| `backend/data/` | `/app/data` | Saved API keys, GitHub token, and LLM preferences |
+| `backend/repositories/` | `/app/repositories` | Cloned/imported repositories |
+
+> **Security note:** `backend/data/config/llm_config.json` stores credentials (including the GitHub token) in plain text. Keep this directory private and never commit it.
+
+### Notes and limitations
+
+- **"Select Local Project" is disabled in Docker.** That feature opens a native folder picker on the server (via Tkinter), which has no display inside a headless container. The Docker build sets `NEXT_PUBLIC_APP_MODE=docker` so the button is hidden. Use **Import from GitHub API** or **Clone Repository** instead — both work fully inside the container (the `git` binary is installed in the backend image).
+- **Ollama:** if you use Ollama as the LLM provider, it runs on your host, not in these containers. From inside the backend container, reach it at `http://host.docker.internal:11434` instead of `http://localhost:11434`.
+- **Rebuilding the frontend:** because `NEXT_PUBLIC_*` values are baked in at build time, any change to the API URL or app mode requires `docker compose up --build` (not just `up`).
 
 ## 🖥️ Usage
 

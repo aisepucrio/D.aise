@@ -1,7 +1,5 @@
 from app.src.model.project_model import Project
 from app.src.model.prompt_model import Prompt as PromptModel
-import tkinter as tk
-from tkinter import filedialog
 from flask import jsonify
 import os
 import subprocess
@@ -18,6 +16,12 @@ class ProjectService:
         self.projects = {}  # cache opcional
 
     def select_path(self):
+        # Import tardio: tkinter só é necessário ao abrir o seletor nativo de
+        # pastas (uso local). Mantê-lo fora do topo permite que o backend suba
+        # em ambientes sem GUI/Tk (ex.: container Docker headless).
+        import tkinter as tk
+        from tkinter import filedialog
+
         root = tk.Tk()
         root.withdraw()  # oculta a janela principal
         root.attributes("-topmost", True)

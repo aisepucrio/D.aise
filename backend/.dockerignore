@@ -1,0 +1,19 @@
+.venv
+venv
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Dados gerados localmente — montados como volume em runtime, não na imagem
+data/
+repositories/
+
+# Não copiar segredos para a imagem; usar env_file/variáveis no compose
+.env
+
+.git
+.gitignore
+README.md
+tree
+Dockerfile
+.dockerignore

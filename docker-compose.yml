@@ -1,0 +1,35 @@
+# D.aise — sobe backend (Flask :8765) e frontend (Next.js :3000) juntos.
+#
+#   docker compose up --build
+#
+# Acesse o app em http://localhost:3000 (a API fica em http://localhost:8765).
+
+services:
+  backend:
+    build:
+      context: ./backend
+    image: daise-backend
+    ports:
+      - "8765:8765"
+    env_file:
+      - ./backend/.env
+    volumes:
+      # Persistem fora da imagem: config (tokens/API keys) e repositórios clonados.
+      - ./backend/data:/app/data
+      - ./backend/repositories:/app/repositories
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # NEXT_PUBLIC_* é embutida no build. A URL precisa ser acessível pelo
+        # NAVEGADOR (host), por isso localhost e não "backend".
+        NEXT_PUBLIC_API_URL: http://localhost:8765
+        NEXT_PUBLIC_APP_MODE: docker
+    image: daise-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped

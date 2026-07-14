@@ -1,5 +1,3 @@
-import tkinter as tk
-from tkinter import filedialog
 from flask import jsonify
 from app.src.service.project_service import ProjectService
 from app.src.service.agent import Agent
@@ -719,6 +717,10 @@ class ProjectControl:
 
 
 def project_control():
+    # Import tardio do tkinter (ver nota em ProjectService.select_path).
+    import tkinter as tk
+    from tkinter import filedialog
+
     # Cria uma janela invisível do tkinter
     root = tk.Tk()
     root.withdraw()  # Esconde a janela principal
@@ -733,10 +735,11 @@ def project_control():
         print("No folder selected")
         return "No folder selected"
 
-import tkinter as tk
-from tkinter import filedialog
-
 def select_path():
+    # Import tardio do tkinter (ver nota em ProjectService.select_path).
+    import tkinter as tk
+    from tkinter import filedialog
+
     root = tk.Tk()
     root.withdraw()  # oculta a janela principal
     root.attributes("-topmost", True)
