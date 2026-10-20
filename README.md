@@ -6,6 +6,8 @@
 
 The system analyzes your repository structure, extracts relevant project information, and produces high-quality documentation in seconds. It supports local repositories, GitHub integration (import or clone), and works with both local LLMs (via Ollama) and remote LLM services (Gemini, OpenAI).
 
+**Github Link** https://github.com/aisepucrio/d.aise
+
 ## 🎥 Demo
 
 **Zenodo:** https://zenodo.org/records/20386248
@@ -112,6 +114,23 @@ D.aise/
 | Gemini   | Google API key |
 | Ollama   | [Ollama](https://ollama.com) installed and running locally |
 | None     | Set `USE_LLM=false` to use mockup output (development only) |
+
+## 💻 Minimum Hardware Requirements
+
+The application itself is lightweight. Hardware requirements depend mainly on the selected LLM provider.
+
+| Scenario | Minimum | Recommended |
+|----------|---------|-------------|
+| Remote LLM (Gemini/OpenAI) | 2 CPU cores, 4 GB RAM | 4 CPU cores, 8 GB RAM |
+| Local LLM (Ollama, 7B–8B model) | 4 CPU cores, 16 GB RAM | 8 CPU cores, 32 GB RAM |
+
+### Storage
+
+- **Application:** ~2 GB
+- **Docker images:** ~3–5 GB
+- **Local LLM models (Ollama):** 4–8 GB per model (depending on the selected model)
+
+> **Note:** Running local LLMs does not require a GPU, but inference will be significantly faster with one. A modern NVIDIA GPU with at least 8 GB of VRAM is recommended for better performance when using Ollama.
 
 ## 🚀 Installation and Configuration
 
