@@ -14,6 +14,9 @@ repositories
 ./data
 /data/
 
+# Dados do Postgres (volume do docker compose)
+pgdata/
+
 app/output/*
 
 prompts/template_debug.txt

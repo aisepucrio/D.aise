@@ -33,9 +33,52 @@ The following main dependencies are required to run AISE Docs:
 * flask-cors
 * python-dotenv
 * google-genai
-* dotenv
 * GitPython
 * tiktoken
+* SQLAlchemy + Alembic (ORM and migrations)
+* psycopg (PostgreSQL driver)
+* cryptography (credential encryption at rest)
+
+### Data store
+
+State is persisted in **PostgreSQL** (not flat files). Four tables:
+`projects`, `prompts`, `default_prompts`, and `llm_config`. The ORM models live
+in `app/src/db_models.py`; the connection/session factory in `app/src/db.py`.
+
+Two environment variables are required:
+
+| Var | Purpose |
+|-----|---------|
+| `DATABASE_URL` | Postgres connection string, e.g. `postgresql://daise:daise@localhost:5432/daise` (the short `postgresql://` form is auto-upgraded to the psycopg3 driver). |
+| `DAISE_SECRET_KEY` | Fernet master key used to encrypt credentials stored in the **cloud** mode. Generate one with `python -m app.src.security.crypto`. |
+
+### Migrations & seeding
+
+```bash
+# create/upgrade the schema
+alembic upgrade head
+
+# seed the versioned prompts, set defaults, and import any legacy JSON
+python -m scripts.migrate_json_to_pg
+```
+
+The migration script is idempotent and also imports legacy data from the old
+JSON files (`data/repositories/*.json`, `data/config/llm_config.json`,
+`prompts/prompts.json`) when present.
+
+### Credential security
+
+Provider credentials (Gemini/OpenAI API keys, GitHub token) can be stored in one
+of two modes, chosen per credential in the UI:
+
+* **cloud** — encrypted with `DAISE_SECRET_KEY` (Fernet) and kept in the
+  `llm_config` table. Only ciphertext touches the database.
+* **local** — kept only on the host in `data/config/llm_config_local.json`
+  (gitignored), never sent to the database.
+
+The API never returns secrets to the browser — only `hasKey`, a masked preview,
+and the `storageMode`. The real value is resolved server-side when calling the
+provider.
 
 ## Installation
 
@@ -45,14 +88,17 @@ To install AISE Docs, follow these steps:
 2. Navigate to the project directory and create a new Python virtual environment using `python -m venv .venv`.
 3. Activate the virtual environment using `.venv/Scripts/activate` on Windows or `source .venv/bin/activate` on Linux.
 4. Install the required dependencies using `pip install -r requirements.txt`.
-5. Start the Flask server by running `python server.py` (API on port `8765`).
+5. Provision PostgreSQL and set `DATABASE_URL` + `DAISE_SECRET_KEY` in `.env` (see `.env.example`).
+6. Apply migrations and seed: `alembic upgrade head && python -m scripts.migrate_json_to_pg`.
+7. Start the Flask server by running `python server.py` (API on port `8765`).
 
 ### Configuration files
 
 | Path | In Git? | Purpose |
 |------|---------|---------|
 | `config/models.json` | Yes | LLM model catalog shown in the UI |
-| `data/config/llm_config.json` | No (`data/` is gitignored) | API keys and saved LLM preferences (created on first save) |
+| `.env` | No | `USE_LLM`, `DEBUG`, `DATABASE_URL`, `DAISE_SECRET_KEY` (see `.env.example`) |
+| `data/config/llm_config_local.json` | No (`data/` is gitignored) | Credentials saved in **local** mode only |
 
 ## Usage Instructions
 

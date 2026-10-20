@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Check, Copy, Download, GitCommit, Loader2 } from "lucide-react";
+import { Check, Copy, Download, GitCommit, GitCompare, Loader2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import type { ApiProject } from "@/types/api";
 import { applyReadme, applyReadmeGithub, gitCommitReadme } from "@/services/api";
 import CommitGithubModal from "./CommitGithubModal";
+import ReadmeDiffView from "./ReadmeDiffView";
 
 type OverwriteReadmeModalProps = {
   open: boolean;
@@ -58,6 +59,8 @@ export type ReadmeResultSectionProps = {
   readmeText: string;
   project: ApiProject;
   onReadmeCreated?: () => void;
+  /** README atual do projeto — quando presente, habilita o diff (liga/desliga). */
+  oldReadmeText?: string;
 };
 
 type ActionState = "idle" | "loading" | "success" | "error";
@@ -67,8 +70,10 @@ export default function ReadmeResultSection({
   readmeText,
   project,
   onReadmeCreated,
+  oldReadmeText = "",
 }: ReadmeResultSectionProps) {
   const [tab, setTab] = useState<Tab>("preview");
+  const [diffOn, setDiffOn] = useState(false);
   const [applyState, setApplyState] = useState<ActionState>("idle");
   const [commitState, setCommitState] = useState<ActionState>("idle");
   const [commitModalOpen, setCommitModalOpen] = useState(false);
@@ -86,6 +91,7 @@ export default function ReadmeResultSection({
 
   useEffect(() => {
     setTab("preview");
+    setDiffOn(false);
     setApplyState("idle");
     setCommitState("idle");
     setCommitModalOpen(false);
@@ -93,6 +99,8 @@ export default function ReadmeResultSection({
     setCopied(false);
     setActionError(null);
   }, [readmeText]);
+
+  const hasOldReadme = oldReadmeText.trim().length > 0;
 
   const sectionRef = useCallback((node: HTMLDivElement | null) => {
     if (node) {
@@ -201,21 +209,57 @@ export default function ReadmeResultSection({
               Generated README
             </span>
 
-            {/* Tabs */}
-            <div className="flex">
-              {(["markdown", "preview"] as Tab[]).map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setTab(t)}
-                  className={`border-b-2 px-4 py-2 text-xs font-medium uppercase tracking-wide transition ${tab === t
-                    ? "border-brand text-brand"
-                    : "border-transparent text-zinc-500 hover:text-zinc-300"
+            {/* Tabs + toggle de diff */}
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex">
+                {(["markdown", "preview"] as Tab[]).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => {
+                      setDiffOn(false);
+                      setTab(t);
+                    }}
+                    className={`border-b-2 px-4 py-2 text-xs font-medium uppercase tracking-wide transition ${
+                      tab === t && !diffOn
+                        ? "border-brand text-brand"
+                        : "border-transparent text-zinc-500 hover:text-zinc-300"
                     }`}
+                  >
+                    {t === "markdown" ? "Markdown" : "Preview"}
+                  </button>
+                ))}
+              </div>
+
+              {/* Liga/desliga do diff — só quando há README atual para comparar */}
+              {hasOldReadme ? (
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={diffOn}
+                  onClick={() => setDiffOn((v) => !v)}
+                  className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-medium transition ${
+                    diffOn
+                      ? "border-brand/50 bg-brand/10 text-brand"
+                      : "border-stroke text-zinc-400 hover:text-zinc-200"
+                  }`}
+                  title="Comparar o README proposto com o atual"
                 >
-                  {t === "markdown" ? "Markdown" : "Preview"}
+                  <GitCompare className="size-3.5" strokeWidth={1.75} aria-hidden />
+                  Diff
+                  <span
+                    className={`relative inline-block h-4 w-7 shrink-0 rounded-full transition ${
+                      diffOn ? "bg-brand" : "bg-zinc-700"
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 size-3 rounded-full bg-black transition-all ${
+                        diffOn ? "left-3.5" : "left-0.5"
+                      }`}
+                    />
+                  </span>
                 </button>
-              ))}
+              ) : null}
             </div>
           </div>
 
@@ -301,7 +345,11 @@ export default function ReadmeResultSection({
 
       {/* Content */}
       <div className="px-6 py-5">
-        {tab === "markdown" ? (
+        {diffOn && hasOldReadme ? (
+          <div className="rounded-lg border border-stroke bg-black/40">
+            <ReadmeDiffView oldText={oldReadmeText} newText={editableReadme} />
+          </div>
+        ) : tab === "markdown" ? (
           <textarea
             // readOnly
             value={editableReadme}

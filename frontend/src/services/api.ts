@@ -6,15 +6,60 @@ import type {
   ApiModels,
   ApiGenerateReadmeResponse,
   ApiUpdateReadmeResponse,
+  ApiAuthResponse,
+  ApiUser,
+  ApiGeneration,
 } from "@/types/api";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8765";
 
+const TOKEN_KEY = "daise_token";
+
+export function getToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return window.localStorage.getItem(TOKEN_KEY);
+}
+
+export function setToken(token: string | null) {
+  if (typeof window === "undefined") return;
+  if (token) window.localStorage.setItem(TOKEN_KEY, token);
+  else window.localStorage.removeItem(TOKEN_KEY);
+}
+
+/** Erro de autenticação (HTTP 401) — usado pelo AuthContext para deslogar. */
+export class UnauthorizedError extends Error {
+  constructor(message = "Não autenticado") {
+    super(message);
+    this.name = "UnauthorizedError";
+  }
+}
+
+/** Limpa o token e avisa o app (AuthContext ouve) para deslogar na hora. */
+function handleUnauthorized() {
+  setToken(null);
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event("daise:unauthorized"));
+  }
+}
+
+function authHeaders(extra?: HeadersInit): HeadersInit {
+  const token = getToken();
+  return {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...extra,
+  };
+}
+
 async function req<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
     ...options,
+    headers: authHeaders(options?.headers),
   });
+  if (res.status === 401) {
+    handleUnauthorized();
+    throw new UnauthorizedError();
+  }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(
@@ -24,6 +69,59 @@ async function req<T>(path: string, options?: RequestInit): Promise<T> {
     );
   }
   return res.json() as Promise<T>;
+}
+
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+
+export function authRegister(data: {
+  email: string;
+  password: string;
+  name?: string;
+}): Promise<{ user: ApiUser }> {
+  return req("/auth/register", { method: "POST", body: JSON.stringify(data) });
+}
+
+export function authLogin(data: {
+  email: string;
+  password: string;
+}): Promise<ApiAuthResponse> {
+  return req("/auth/login", { method: "POST", body: JSON.stringify(data) });
+}
+
+export function authLogout(): Promise<{ message: string }> {
+  return req("/auth/logout", { method: "POST" });
+}
+
+export function authMe(): Promise<{ user: ApiUser }> {
+  return req("/auth/me");
+}
+
+// ─── Conta / privacidade ────────────────────────────────────────────────────
+
+export function clearCredentials(): Promise<{ message: string; removed: number }> {
+  return req("/account/credentials", { method: "DELETE" });
+}
+
+export function updateProfile(data: {
+  email?: string;
+  name?: string;
+}): Promise<{ user: ApiUser }> {
+  return req("/account/profile", { method: "PATCH", body: JSON.stringify(data) });
+}
+
+export function changePassword(data: {
+  current_password: string;
+  new_password: string;
+}): Promise<{ message: string }> {
+  return req("/account/password", { method: "POST", body: JSON.stringify(data) });
+}
+
+export function getAccountHistory(): Promise<ApiGeneration[]> {
+  return req("/account/history");
+}
+
+export function getAccountGeneration(id: string): Promise<ApiGeneration> {
+  return req(`/account/generations/${id}`);
 }
 
 // ─── Projects ─────────────────────────────────────────────────────────────────
@@ -39,8 +137,12 @@ export async function chooseLocalRepository(): Promise<{
 }> {
   // Not using req() because 409 (project already exists) still returns the project
   const res = await fetch(`${BASE}/projects/choose_local_repository`, {
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders(),
   });
+  if (res.status === 401) {
+    handleUnauthorized();
+    throw new UnauthorizedError();
+  }
   return res.json() as Promise<{ status: number; message: string; project?: ApiProject }>;
 }
 

@@ -1,0 +1,6 @@
+# Configuração local do Docker Compose (contém segredos). NÃO comitar.
+.env
+
+# Dados montados como volume no host
+backend/data/
+backend/repositories/

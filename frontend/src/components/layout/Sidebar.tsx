@@ -17,6 +17,7 @@ import {
 
 import { usePromptLab } from "@/context/PromptLabContext";
 import { useSidebar } from "@/context/SidebarContext";
+import { useConfirm } from "@/context/ConfirmContext";
 import { deleteProject, getProjects } from "@/services/api";
 import type { ApiProject } from "@/types/api";
 import PromptLibraryPanel from "@/components/features/PromptLibraryPanel";
@@ -41,6 +42,7 @@ function SidebarInner() {
   // const { isLibraryOpen, toggleLibrary, newPrompt } =
   //   usePromptLab();
   const { newPrompt } = usePromptLab();
+  const confirm = useConfirm();
 
   useEffect(() => {
     getProjects()
@@ -64,8 +66,13 @@ function SidebarInner() {
     folderName: string,
     projectName: string,
   ) {
-    if (!window.confirm(`Delete project "${projectName}"?`))
-      return;
+    const ok = await confirm({
+      title: "Excluir projeto?",
+      description: `O projeto "${projectName}" será removido. Esta ação não pode ser desfeita.`,
+      confirmLabel: "Excluir",
+      danger: true,
+    });
+    if (!ok) return;
 
     try {
       await deleteProject(folderName);

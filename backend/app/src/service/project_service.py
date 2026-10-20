@@ -11,6 +11,16 @@ import re
 from datetime import datetime
 import platform
 
+
+def _resolve_github_token(llm_config: dict | None) -> str:
+    """Token do GitHub: usa o do payload; senão resolve do servidor (cloud/local)."""
+    token = (llm_config or {}).get("github_token", "")
+    if token:
+        return token
+    from app.src.service.llm_config_service import resolve_secret
+    return resolve_secret("github")
+
+
 class ProjectService:
     def __init__(self):
         self.projects = {}  # cache opcional
@@ -188,13 +198,7 @@ class ProjectService:
                 if project.source == "github":
                     # Para projetos GitHub: busca árvore atualizada da API
                     from app.src.service.github_service import GithubService
-                    github_token = llm_config.get("github_token", "")
-                    if not github_token:
-                        _config_path = os.path.join("data", "config", "llm_config.json")
-                        if os.path.exists(_config_path):
-                            with open(_config_path, "r", encoding="utf-8") as _f:
-                                _cfg = json.load(_f)
-                            github_token = _cfg.get("github", {}).get("committedToken", "")
+                    github_token = _resolve_github_token(llm_config)
                     svc = GithubService(token=github_token)
                     owner, repo_name = project.github_repo.split("/", 1)
                     info = svc.get_repo_info(owner, repo_name)
@@ -212,13 +216,7 @@ class ProjectService:
                 try:
                     if project.source == "github":
                         from app.src.service.github_service import GithubService
-                        github_token = llm_config.get("github_token", "")
-                        if not github_token:
-                            _config_path = os.path.join("data", "config", "llm_config.json")
-                            if os.path.exists(_config_path):
-                                with open(_config_path, "r", encoding="utf-8") as _f:
-                                    _cfg = json.load(_f)
-                                github_token = _cfg.get("github", {}).get("committedToken", "")
+                        github_token = _resolve_github_token(llm_config)
                         owner, repo_name = project.github_repo.split("/", 1)
                         svc = GithubService(token=github_token)
                         if has_title_desc and not has_diffs:
@@ -239,22 +237,8 @@ class ProjectService:
                 except Exception as e:
                     print(f"⚠️ Commits não pôde ser obtido para geração do README: {e}")
 
-            # 1. Caminho do arquivo de defaults
-            defaults_path = os.path.join("data", "config", "default_prompts.json")
-
-            if not os.path.exists(defaults_path):
-                print("\n\n got an error here \n\n")
-                return {"error": "Arquivo default_prompts.json não encontrado."}, 500
-
-            print("aqui esta indo 🎃 3")
-
-            # 2. Carrega defaults
-            with open(defaults_path, "r", encoding="utf-8") as f:
-                defaults = json.load(f)
-
-            prompt_id = defaults.get("create_readme")
-
-            print("aqui esta indo 🎃 4")
+            # 1-2. Default prompt do banco (prompts.is_default)
+            prompt_id = PromptModel().get_default_prompt_id("create_readme")
 
             if not prompt_id:
                 return {"error": "Prompt default para create_readme não configurado."}, 400
@@ -291,7 +275,46 @@ class ProjectService:
             #  Salva o conteúdo do README no diretório sequencial
             self._save_generated_readme(project, content)
 
-            return {"content": parsed.get("content", raw_response)}, 200
+            # README atual do projeto (para o diff no frontend). Espelha a lógica
+            # do update_readme: GitHub via API, local via arquivo em disco.
+            old_readme = ""
+            try:
+                if project.source == "github" and project.github_repo:
+                    from app.src.service.github_service import GithubService
+                    owner, repo_name = project.github_repo.split("/", 1)
+                    github_token = _resolve_github_token(llm_config)
+                    old_readme = GithubService(token=github_token).get_readme_content(
+                        owner, repo_name
+                    )
+                else:
+                    old_readme = project.readme_content or ""
+            except Exception as e:
+                print(f"⚠️ Não foi possível ler o README atual para diff: {e}")
+
+            # Histórico da execução
+            from app.src.service.history_service import record_generation
+            gen_id = record_generation(
+                folder_name=data.get("folder_name"),
+                operation="create_readme",
+                agent=agent,
+                output=content,
+                prompt_id=prompt_id,
+                previous_readme=old_readme,
+                inputs={
+                    "tree": bool(data.get("tree")),
+                    "commit_options": data.get("commit_options") or [],
+                    "language": data.get("language"),
+                    "framework": data.get("framework"),
+                    "dependence_file_name": data.get("dependence_file_name"),
+                    "has_description": bool(data.get("description")),
+                },
+            )
+
+            return {
+                "content": content,
+                "generation_id": gen_id,
+                "previous_readme": old_readme,
+            }, 200
 
         except Exception as e:
             print("Erro em generate_readme:", e)
@@ -548,7 +571,7 @@ class ProjectService:
             # Fluxo GitHub API
             # ============================
             from app.src.service.github_service import GithubService
-            github_token = llm_config.get("github_token", "")
+            github_token = _resolve_github_token(llm_config)
             owner, repo_name = project.github_repo.split("/", 1)
             svc = GithubService(token=github_token)
 
@@ -609,13 +632,10 @@ class ProjectService:
         prompt_model = PromptModel()
         prompt_model.project = project
 
-        # Caminho do arquivo de defaults
-        defaults_path = os.path.join("data", "config", "default_prompts.json")
-        
-        with open(defaults_path, "r", encoding="utf-8") as f:
-            defaults = json.load(f)
-
-        prompt_id = defaults.get("update_readme")
+        # Default prompt do banco (prompts.is_default)
+        prompt_id = prompt_model.get_default_prompt_id("update_readme")
+        if not prompt_id:
+            return {"error": "Prompt default para update_readme não configurado."}, 400
 
         prompt = prompt_model.get_prompt_by_id(prompt_id)
 
@@ -645,13 +665,36 @@ class ProjectService:
         # ============================
         if project.source == "github":
             owner, repo_name = project.github_repo.split("/", 1)
-            github_token = llm_config.get("github_token", "")
+            github_token = _resolve_github_token(llm_config)
             svc = GithubService(token=github_token)
             old_readme = svc.get_readme_content(owner, repo_name)
         else:
             old_readme = project.readme_content
 
-        return {"content": {"old_readme": old_readme, "updated_readme": content}, "path": readme_path}, 200
+        # Histórico da execução
+        from app.src.service.history_service import record_generation
+        gen_id = record_generation(
+            folder_name=data.get("folder_name"),
+            operation="update_readme",
+            agent=agent,
+            output=content,
+            prompt_id=prompt_id,
+            previous_readme=old_readme,
+            inputs={
+                "commit_options": data.get("commit_options") or [],
+                "range_type": data.get("range_type"),
+                "start_date": data.get("start_date"),
+                "end_date": data.get("end_date"),
+                "language": data.get("language"),
+                "framework": data.get("framework"),
+            },
+        )
+
+        return {
+            "content": {"old_readme": old_readme, "updated_readme": content},
+            "path": readme_path,
+            "generation_id": gen_id,
+        }, 200
 
 
 
@@ -678,9 +721,14 @@ class ProjectService:
             # Caminho final do README.md
             readme_path = os.path.join(path, "README.md")
 
+            folder_name = data.get("folder_project") or os.path.basename(os.path.normpath(path))
+            from app.src.service.history_service import record_decision
+
             # Verifica USO DE LLM
             USE_LLM = os.getenv("USE_LLM") in ["1", "true", "True", "TRUE"]
             if not USE_LLM:
+                record_decision(folder_name, decision="approved", apply_target="local",
+                                 generation_id=data.get("generation_id"))
                 return {
                     "message": "README aplicado com sucesso. (MOCKUP MODE)",
                     "readme_path": readme_path
@@ -691,6 +739,8 @@ class ProjectService:
             with open(readme_path, "w", encoding="utf-8") as f:
                 f.write(content)
 
+            record_decision(folder_name, decision="approved", apply_target="local",
+                             generation_id=data.get("generation_id"))
             return {
                 "message": "README aplicado com sucesso.",
                 "readme_path": readme_path
@@ -724,16 +774,7 @@ class ProjectService:
             if "/" not in github_repo:
                 return {"error": "github_repo inválido no projeto."}, 400
             owner, repo_name = github_repo.split("/", 1)
-            github_token = llm_config.get("github_token", "")
-            if not github_token:
-                _config_path = os.path.join("data", "config", "llm_config.json")
-                if os.path.exists(_config_path):
-                    try:
-                        with open(_config_path, "r", encoding="utf-8") as _f:
-                            _cfg = json.load(_f)
-                        github_token = (_cfg.get("github") or {}).get("committedToken", "") or ""
-                    except Exception:
-                        pass
+            github_token = _resolve_github_token(llm_config)
 
             from app.src.service.github_service import GithubService
             svc = GithubService(token=github_token)
@@ -741,6 +782,11 @@ class ProjectService:
             full_message = f"{commit_title}\n\n{commit_message}".strip() if commit_title else commit_message
             result = svc.create_or_update_readme(owner, repo_name, readme_content, full_message)
             html_url = result.get("content", {}).get("html_url", "")
+
+            from app.src.service.history_service import record_decision
+            record_decision(folder_name, decision="approved", apply_target="github",
+                            commit_url=html_url, generation_id=data.get("generation_id"))
+
             return {"message": "README aplicado ao repositório GitHub com sucesso.", "url": html_url}, 200
 
         except RuntimeError as e:
@@ -835,6 +881,11 @@ class ProjectService:
                 }, 500
 
             commit_hash = hash_result.stdout.strip()
+
+            folder_name = data.get("folder_project") or os.path.basename(os.path.normpath(repo_path))
+            from app.src.service.history_service import record_decision
+            record_decision(folder_name, decision="approved", apply_target="git_commit",
+                            commit_hash=commit_hash, generation_id=data.get("generation_id"))
 
             return {
                 "message": "Commit realizado com sucesso!",

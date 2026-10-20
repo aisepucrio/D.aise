@@ -1,3 +1,54 @@
+export type ApiUser = {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ApiAuthResponse = {
+  token: string;
+  user: ApiUser;
+  expires_at: string;
+};
+
+export type ApiDecision = {
+  id: string;
+  decision: "approved" | "rejected";
+  apply_target: string | null;
+  commit_hash: string | null;
+  commit_url: string | null;
+  note: string | null;
+  created_at: string;
+};
+
+export type ApiGeneration = {
+  id: string;
+  project?: string;
+  operation: string;
+  provider: string;
+  model: string;
+  temperature: number | null;
+  max_output_tokens: number | null;
+  input_tokens: number | null;
+  output_tokens: number | null;
+  duration_ms: number | null;
+  status: string;
+  error_message?: string | null;
+  rating: number | null;
+  quality_note?: string | null;
+  prompt_id?: string | null;
+  created_at: string;
+  decisions: ApiDecision[];
+  inputs?: Record<string, unknown>;
+  // presentes só no detalhe:
+  prompt_rendered?: string;
+  output?: string;
+  previous_readme?: string | null;
+};
+
 export type ApiProject = {
   id: string;
   name: string;
@@ -39,6 +90,18 @@ export type ApiPromptsPayload = {
   error?: string;
 };
 
+// Credencial secreta: a API nunca devolve o segredo — apenas se existe (hasKey),
+// uma máscara para exibição (maskedKey) e o modo de armazenamento (storageMode).
+export type ApiSecretField = {
+  apiKey?: string;
+  committedApiKey?: string;
+  token?: string;
+  committedToken?: string;
+  hasKey?: boolean;
+  maskedKey?: string;
+  storageMode?: "cloud" | "local";
+};
+
 export type ApiLlmConfig = {
   __lastSavedConfig: {
     provider: string;
@@ -46,10 +109,10 @@ export type ApiLlmConfig = {
     temperature: number;
     tokens: string;
   };
-  gemini: { apiKey: string; committedApiKey: string };
-  openai: { apiKey: string; committedApiKey: string };
+  gemini: ApiSecretField;
+  openai: ApiSecretField;
   ollama: { endpoint: string; committedEndpoint: string };
-  github: { token: string; committedToken: string };
+  github: ApiSecretField;
 };
 
 export type ApiModelOption = { value: string; label: string };
@@ -57,6 +120,9 @@ export type ApiModels = Record<string, ApiModelOption[]>;
 
 export type ApiGenerateReadmeResponse = {
   content: string;
+  generation_id?: number;
+  /** README atual do projeto (vazio se não houver), usado para o diff. */
+  previous_readme?: string;
 };
 
 export type ApiUpdateReadmeResponse = {

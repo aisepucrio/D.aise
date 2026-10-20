@@ -24,4 +24,6 @@ COPY . .
 
 EXPOSE 8765
 
-CMD ["python", "server.py"]
+# No boot: aplica as migrações, faz seed dos prompts (e importa qualquer dado
+# legado montado em /app/data) e sobe a API. Tudo idempotente.
+CMD ["sh", "-c", "alembic upgrade head && python -m scripts.migrate_json_to_pg && python server.py"]

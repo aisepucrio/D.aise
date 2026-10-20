@@ -1,9 +1,45 @@
 from flask import Blueprint, jsonify, request
-# from app.src.control.project_control import select_path, choose_project_local, save_project_control 
+# from app.src.control.project_control import select_path, choose_project_local, save_project_control
 from app.src.control.project_control import ProjectControl
+from app.src.service import history_service
 import os
 
 project_bp = Blueprint("projects", __name__)
+
+
+# ================================= HISTÓRICO =================================
+@project_bp.route("/<string:folder_name>/history", methods=["GET"])
+def get_history(folder_name):
+    """Lista o histórico de gerações (com decisões) do projeto."""
+    return jsonify(history_service.list_history(folder_name)), 200
+
+
+@project_bp.route("/<string:folder_name>/generations/<string:generation_id>", methods=["GET"])
+def get_generation(folder_name, generation_id):
+    """Detalhe de uma geração (com prompt enviado, output e decisões)."""
+    g = history_service.get_generation(folder_name, generation_id)
+    if g is None:
+        return jsonify({"error": "Geração não encontrada."}), 404
+    return jsonify(g), 200
+
+
+@project_bp.route("/<string:folder_name>/decision", methods=["POST"])
+def post_decision(folder_name):
+    """Registra uma decisão explícita (approved | rejected) sobre uma geração."""
+    data = request.get_json(silent=True) or {}
+    decision = data.get("decision")
+    if decision not in ("approved", "rejected"):
+        return jsonify({"error": "decision deve ser 'approved' ou 'rejected'."}), 400
+    did = history_service.record_decision(
+        folder_name,
+        decision=decision,
+        generation_id=data.get("generation_id"),
+        apply_target=data.get("apply_target"),
+        note=data.get("note"),
+    )
+    if did is None:
+        return jsonify({"error": "Não há geração para vincular a decisão."}), 400
+    return jsonify({"id": did, "decision": decision}), 201
 
 
 # ================================= LISTAR TODOS OS PROJETOS =================================
