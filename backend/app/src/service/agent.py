@@ -21,6 +21,13 @@ class Agent:
         self.prompt = prompt
         self.project = project
         self.llm_config = llm_config or {}
+        # Metadados da última execução (para o histórico de gerações).
+        self.last_provider = None
+        self.last_model = None
+        self.last_temperature = None
+        self.last_max_tokens = None
+        self.last_usage = None          # {"input": int, "output": int}
+        self.last_duration_ms = None
 
     def _resolve_llm_settings(self):
         """
@@ -60,7 +67,51 @@ class Agent:
                 or ""
             ).strip()
 
+        # A API mascara as credenciais, então o payload do frontend não traz mais
+        # o segredo real: resolvemos no servidor (decifra cloud / lê local).
+        from app.src.service.llm_config_service import resolve_secret
+
+        if provider in ("gemini", "openai") and (not api_key or api_key.startswith("••••")):
+            api_key = resolve_secret(provider) or api_key
+
+        if provider == "ollama" and not ollama_url:
+            ollama_url = resolve_secret("ollama") or ollama_url
+
         return provider, model_name, api_key, ollama_url
+
+    def _resolve_generation_params(self):
+        """
+        Resolve os parâmetros de geração (temperature e máximo de tokens de saída)
+        a partir do payload do frontend. Suporta a estrutura plana (legada) e a
+        aninhada em `__lastSavedConfig`.
+
+        Retorna (temperature: float | None, max_tokens: int | None). None indica
+        "não definido" — nesse caso o parâmetro é omitido e o provedor usa o
+        próprio default. `tokens <= 0` é tratado como "sem limite" (omitido).
+        """
+        cfg = self.llm_config or {}
+        last = cfg.get("__lastSavedConfig") or {}
+
+        temp_raw = cfg.get("temperature", last.get("temperature"))
+        tokens_raw = cfg.get("tokens", last.get("tokens"))
+
+        temperature = None
+        if temp_raw is not None and str(temp_raw).strip() != "":
+            try:
+                temperature = float(temp_raw)
+            except (TypeError, ValueError):
+                temperature = None
+
+        max_tokens = None
+        if tokens_raw is not None and str(tokens_raw).strip() != "":
+            try:
+                parsed = int(float(tokens_raw))
+                if parsed > 0:
+                    max_tokens = parsed
+            except (TypeError, ValueError):
+                max_tokens = None
+
+        return temperature, max_tokens
 
 
 # README
@@ -193,50 +244,160 @@ class Agent:
 
         if not USE_LLM:
             print("USE_LLM desativado. Usando mockup.")
+            self.last_provider = "mockup"
+            self.last_duration_ms = 0
             return self.load_mockup()
 
         llm_provider, model_name, api_key, ollama_url = self._resolve_llm_settings()
+        temperature, max_tokens = self._resolve_generation_params()
+        print(f"Generation params -> temperature: {temperature}, max_tokens: {max_tokens}")
 
-        if llm_provider == "openai":
-            raise RuntimeError("Provedor OpenAI ainda não suportado no backend.")
+        # Registra o que efetivamente vai rodar (para o histórico de gerações).
+        self.last_provider = llm_provider
+        self.last_model = model_name
+        self.last_temperature = temperature
+        self.last_max_tokens = max_tokens
 
-        if llm_provider == "ollama":
-            return self._run_ollama(model_name=model_name, ollama_url=ollama_url)
+        start = time.perf_counter()
+        try:
+            if llm_provider == "ollama":
+                result = self._run_ollama(
+                    model_name=model_name,
+                    ollama_url=ollama_url,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                )
+            elif llm_provider == "openai":
+                result = self._run_openai(
+                    model_name=model_name,
+                    api_key=api_key,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                )
+            else:
+                result = self._run_gemini(
+                    model_name=model_name,
+                    api_key=api_key,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                )
+        finally:
+            self.last_duration_ms = int((time.perf_counter() - start) * 1000)
+        return result
 
-        return self._run_gemini(model_name=model_name, api_key=api_key)
-
-    def _run_gemini(self, model_name: str, api_key: str):
+    def _run_gemini(self, model_name: str, api_key: str, temperature=None, max_tokens=None):
         if not api_key:
             raise RuntimeError("Chave da API do Gemini não informada.")
         if not model_name:
             raise RuntimeError("Modelo não informado para Gemini.")
         print(f"Running Gemini with model: {model_name}")
         try:
+            from google.genai import types
+
+            config_kwargs = {}
+            if temperature is not None:
+                config_kwargs["temperature"] = temperature
+            if max_tokens is not None:
+                config_kwargs["max_output_tokens"] = max_tokens
+
+            generate_kwargs = {"model": model_name, "contents": self.prompt.content}
+            if config_kwargs:
+                generate_kwargs["config"] = types.GenerateContentConfig(**config_kwargs)
+
             client = genai.Client(api_key=api_key)
-            response = client.models.generate_content(
-                model=model_name,
-                contents=self.prompt.content
-            )
+            response = client.models.generate_content(**generate_kwargs)
+            try:
+                um = getattr(response, "usage_metadata", None)
+                if um is not None:
+                    self.last_usage = {
+                        "input": getattr(um, "prompt_token_count", None),
+                        "output": getattr(um, "candidates_token_count", None),
+                    }
+            except Exception:
+                pass
             return response.text
         except Exception as e:
             print(f"Erro ao gerar conteúdo: {e}")
             raise RuntimeError("Erro ao gerar conteúdo via LLM") from e
 
-    def _run_ollama(self, model_name: str, ollama_url: str):
+    def _run_openai(self, model_name: str, api_key: str, temperature=None, max_tokens=None):
+        if not api_key:
+            raise RuntimeError("Chave da API da OpenAI não informada.")
+        if not model_name:
+            raise RuntimeError("Modelo não informado para OpenAI.")
+        print(f"Running OpenAI with model: {model_name}")
+        try:
+            from openai import OpenAI
+
+            client = OpenAI(api_key=api_key)
+            kwargs = {
+                "model": model_name,
+                "messages": [{"role": "user", "content": self.prompt.content}],
+            }
+            if temperature is not None:
+                kwargs["temperature"] = temperature
+            if max_tokens is not None:
+                # param atual (substitui max_tokens; funciona em gpt-4o e o-series)
+                kwargs["max_completion_tokens"] = max_tokens
+
+            try:
+                response = client.chat.completions.create(**kwargs)
+            except Exception as e:
+                # Modelos de raciocínio (o-series/gpt-5) rejeitam temperature!=1;
+                # tenta novamente sem o parâmetro.
+                if "temperature" in str(e).lower() and "temperature" in kwargs:
+                    kwargs.pop("temperature", None)
+                    response = client.chat.completions.create(**kwargs)
+                else:
+                    raise
+
+            try:
+                usage = getattr(response, "usage", None)
+                if usage is not None:
+                    self.last_usage = {
+                        "input": getattr(usage, "prompt_tokens", None),
+                        "output": getattr(usage, "completion_tokens", None),
+                    }
+            except Exception:
+                pass
+
+            return response.choices[0].message.content or ""
+        except Exception as e:
+            print(f"Erro ao gerar conteúdo (OpenAI): {e}")
+            raise RuntimeError(f"Erro ao gerar conteúdo via OpenAI: {e}") from e
+
+    def _run_ollama(self, model_name: str, ollama_url: str, temperature=None, max_tokens=None):
         if not ollama_url:
             raise RuntimeError("URL do endpoint Ollama não informada.")
         if not model_name:
             raise RuntimeError("Modelo não informado para Ollama.")
         print(f"Running Ollama with model: {model_name}")
+
+        # Ollama recebe os parâmetros de geração em `options` (num_predict = máx.
+        # de tokens de saída). Só enviamos o que estiver definido.
+        options = {}
+        if temperature is not None:
+            options["temperature"] = temperature
+        if max_tokens is not None:
+            options["num_predict"] = max_tokens
+
+        body = {"model": model_name, "prompt": self.prompt.content, "stream": False}
+        if options:
+            body["options"] = options
+
         response = requests.post(
             f"{ollama_url}/api/generate",
-            json={"model": model_name, "prompt": self.prompt.content, "stream": False},
+            json=body,
             timeout=300
         )
         data = response.json()
         if "response" not in data:
             error_msg = data.get("error", str(data))
             raise RuntimeError(f"Ollama retornou resposta inesperada: {error_msg}")
+        self.last_usage = {
+            "input": data.get("prompt_eval_count"),
+            "output": data.get("eval_count"),
+        }
         return data["response"]
 
     def summarize_text(self, text: str, max_chunk_tokens: int = 30000) -> str:

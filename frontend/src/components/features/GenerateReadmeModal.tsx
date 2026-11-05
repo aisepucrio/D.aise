@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useState } from "react";
 import { Check, Loader2, X } from "lucide-react";
+import ModelPicker, { type ModelSelection } from "./ModelPicker";
 
 export type GenerateReadmeFormData = {
   includeName: boolean;
@@ -12,6 +13,8 @@ export type GenerateReadmeFormData = {
   includeCommitsTitleDesc: boolean;
   includeCommitsDiffs: boolean;
   includeDependenceFile: boolean;
+  provider: string;
+  model: string;
 };
 
 type FormState = GenerateReadmeFormData;
@@ -25,6 +28,8 @@ const initialFormState: FormState = {
   includeCommitsTitleDesc: false,
   includeCommitsDiffs: false,
   includeDependenceFile: true,
+  provider: "",
+  model: "",
 };
 
 function FormCheckboxRow({
@@ -88,6 +93,11 @@ export default function GenerateReadmeModal({
   const idPrefix = useId();
   const titleId = `${idPrefix}-title`;
   const [state, setState] = useState<FormState>(initialFormState);
+  const [hasUsableModel, setHasUsableModel] = useState(true);
+
+  const setSelection = useCallback((sel: ModelSelection) => {
+    setState((s) => ({ ...s, provider: sel.provider, model: sel.model }));
+  }, []);
 
   const handleEscape = useCallback(
     (e: KeyboardEvent) => {
@@ -154,10 +164,23 @@ export default function GenerateReadmeModal({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
-          <p className="mb-5 text-sm text-zinc-400">
-            Select the information you want to include in the README generation:
-          </p>
           <form className="space-y-3" onSubmit={handleSubmit}>
+            {/* Seletor de provedor — só provedores com credencial ficam ativos */}
+            <div className="mb-2">
+              <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-muted">
+                Provedor de IA
+              </label>
+              <ModelPicker
+                value={{ provider: state.provider, model: state.model }}
+                onChange={setSelection}
+                onReady={setHasUsableModel}
+              />
+            </div>
+
+            <p className="pt-1 text-sm text-zinc-400">
+              Selecione as informações a incluir na geração do README:
+            </p>
+
             <FormCheckboxRow
               id={`${idPrefix}-name`}
               label="Project name"
@@ -215,7 +238,7 @@ export default function GenerateReadmeModal({
               ) : null}
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !hasUsableModel || !state.model}
                 className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-green-500 py-2.5 text-sm font-semibold text-black transition hover:bg-green-400 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {isSubmitting ? (

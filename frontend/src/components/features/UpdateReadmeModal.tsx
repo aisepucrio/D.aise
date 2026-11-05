@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useState } from "react";
 import { Check, Loader2, X } from "lucide-react";
+import ModelPicker, { type ModelSelection } from "./ModelPicker";
 
 type CommitRange = "last" | "date";
 
@@ -10,6 +11,8 @@ export type UpdateReadmeFormData = {
   rangeType: string;
   startDate?: string;
   endDate?: string;
+  provider: string;
+  model: string;
 };
 
 const dateInputClass =
@@ -157,6 +160,12 @@ export default function UpdateReadmeModal({
   const idPrefix = useId();
   const titleId = `${idPrefix}-title`;
   const [state, setState] = useState<FormState>(initialFormState);
+  const [selection, setSelectionState] = useState<ModelSelection>({ provider: "", model: "" });
+  const [hasUsableModel, setHasUsableModel] = useState(true);
+
+  const setSelection = useCallback((sel: ModelSelection) => {
+    setSelectionState(sel);
+  }, []);
 
   const handleEscape = useCallback(
     (e: KeyboardEvent) => {
@@ -189,6 +198,8 @@ export default function UpdateReadmeModal({
       rangeType,
       startDate: state.commitRange === "date" ? state.dateFrom : undefined,
       endDate: state.commitRange === "date" ? state.dateTo : undefined,
+      provider: selection.provider,
+      model: selection.model,
     });
   }
 
@@ -231,6 +242,17 @@ export default function UpdateReadmeModal({
 
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
           <form className="space-y-7" onSubmit={handleSubmit}>
+            <section>
+              <h3 className="mb-3 text-sm font-semibold text-zinc-100">
+                Provedor de IA
+              </h3>
+              <ModelPicker
+                value={selection}
+                onChange={setSelection}
+                onReady={setHasUsableModel}
+              />
+            </section>
+
             <section>
               <h3 className="text-sm font-semibold text-zinc-100">Commits</h3>
               <div className="mt-3 space-y-3">
@@ -359,7 +381,7 @@ export default function UpdateReadmeModal({
               ) : null}
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isSubmitting || !hasUsableModel || !selection.model}
                 className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-green-500 py-2.5 text-sm font-semibold text-black transition hover:bg-green-400 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {isSubmitting ? (

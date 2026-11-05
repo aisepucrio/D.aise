@@ -95,100 +95,161 @@ class Project:
     def set_tree(self):
             self.tree = self.get_tree()
 
-    def save_json(self, data):
-        """Salva o JSON recebido do front diretamente em data/<folder_name>.json"""
-        os.makedirs(REPOSITORIES_DIR, exist_ok=True)
-        if "id" not in data or not data["id"]:
-            data["id"] = str(uuid.uuid4())
+    # ─── Persistência (PostgreSQL) ───────────────────────────────────────────
+    # dependence_file_content e readme_content NÃO são persistidos: são
+    # @property computadas a partir do disco.
+    _NON_COLUMN = {"dependence_file_content", "readme_content"}
 
-        print("-------------------------------------")
-        print( data.get("folder_name"))
-        print("-------------------------------------")
+    def _persist_dict(self, data: dict):
+        """Upsert (por user_id + folder_name) de um dict de projeto no banco."""
+        from app.src.db import session_scope
+        from app.src.db_models import Project as ProjectRow
+        from app.src.service.user_context import current_user_id
+
+        uid = current_user_id()
+        cols = set(ProjectRow.COLUMNS)
         folder_name = data.get("folder_name") or data.get("name") or "project"
-        file_path = os.path.join(REPOSITORIES_DIR, f"{folder_name}.json")
+        data["folder_name"] = folder_name
+        data["user_id"] = uid
 
-        with open(file_path, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=4)
+        # Campos sem coluna dedicada (ex.: has_readme) vão para o JSONB `extra`.
+        extra = {
+            k: v for k, v in data.items()
+            if k not in cols and k not in self._NON_COLUMN
+        }
 
+        with session_scope() as s:
+            row = (
+                s.query(ProjectRow)
+                .filter(ProjectRow.user_id == uid, ProjectRow.folder_name == folder_name)
+                .one_or_none()
+            )
+            if row is None:
+                row = ProjectRow(folder_name=folder_name, user_id=uid)
+                s.add(row)
+
+            for col in cols:
+                if col == "folder_name":
+                    continue
+                if col == "id":
+                    if data.get("id"):
+                        row.id = data["id"]
+                    continue
+                if col in data and data[col] is not None:
+                    setattr(row, col, data[col])
+
+            merged = dict(row.extra or {})
+            merged.update(extra)
+            row.extra = merged
+
+            s.flush()
+            data["id"] = row.id
         return data
 
+    def save_json(self, data):
+        """Recebe o dict do front e faz upsert no Postgres (chave: folder_name)."""
+        if not isinstance(data, dict):
+            raise ValueError("Payload de projeto inválido.")
+        if not data.get("id"):
+            data["id"] = str(uuid.uuid4())
+        return self._persist_dict(dict(data))
+
     def save(self):
-        """Salva o projeto como JSON em /data/<folder_name>.json"""
-        os.makedirs(REPOSITORIES_DIR, exist_ok=True)
-        file_path = os.path.join(REPOSITORIES_DIR, f"{self.folder_name}.json")
-
-        with open(file_path, "w", encoding="utf-8") as f:
-            json.dump(self.__dict__, f, ensure_ascii=False, indent=4)
-
-        return file_path
+        """Faz upsert do estado atual do objeto no Postgres."""
+        if not getattr(self, "id", None):
+            self.id = str(uuid.uuid4())
+        data = {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
+        self._persist_dict(data)
+        return self.folder_name
 
     def read():
         """ Read existing project """
         pass
 
+    @staticmethod
+    def _row_to_dict(row) -> dict:
+        data = row.to_dict()
+        if getattr(row, "extra", None):
+            data.update(row.extra)
+        return data
+
     def get_all_projects(self):
-        """Retorna todos os projetos salvos na pasta data/ como uma lista de dicts"""
+        """Retorna todos os projetos do usuário atual como lista de dicts."""
+        from app.src.db import session_scope
+        from app.src.db_models import Project as ProjectRow
+        from app.src.service.user_context import current_user_id
+
+        uid = current_user_id()
         projects = []
-        data_dir = REPOSITORIES_DIR
-        if not os.path.exists(data_dir):
-            return projects  # retorna lista vazia se não houver pasta
-
-        for filename in os.listdir(data_dir):
-            if filename.endswith(".json"):
-                file_path = os.path.join(data_dir, filename)
-                try:
-                    with open(file_path, "r", encoding="utf-8") as f:
-                        project_data = json.load(f)
-                        projects.append(project_data)
-                except Exception as e:
-                    print(f"Erro ao ler {file_path}: {e}")
-
+        with session_scope() as s:
+            rows = (
+                s.query(ProjectRow)
+                .filter(ProjectRow.user_id == uid)
+                .order_by(ProjectRow.created_at)
+                .all()
+            )
+            for row in rows:
+                projects.append(self._row_to_dict(row))
         return projects
-    
+
     def find_project_by_folder_name(self, folder_name: str):
-        """
-        Carrega os dados do projeto salvo em data/<folder_name>.json,
-        popula os atributos do objeto e retorna a instância atual.
-        """
-        file_path = os.path.join(REPOSITORIES_DIR, f"{folder_name}.json")
+        """Carrega o projeto do usuário atual, popula os atributos e retorna self (ou None)."""
+        from app.src.db import session_scope
+        from app.src.db_models import Project as ProjectRow
+        from app.src.service.user_context import current_user_id
 
-        if not os.path.exists(file_path):
-            # raise FileNotFoundError(f"Projeto '{folder_name}' não encontrado em {file_path}")
-            return None  # não lança erro — apenas indica "não existe"
+        uid = current_user_id()
+        with session_scope() as s:
+            row = (
+                s.query(ProjectRow)
+                .filter(ProjectRow.user_id == uid, ProjectRow.folder_name == folder_name)
+                .one_or_none()
+            )
+            if row is None:
+                return None  # não lança erro — apenas indica "não existe"
+            project_data = self._row_to_dict(row)
 
-        with open(file_path, "r", encoding="utf-8") as f:
-            project_data = json.load(f)
-
-        # Atualiza os atributos existentes e cria os novos se necessário
         for key, value in project_data.items():
             setattr(self, key, value)
-
-        # Garante que o folder_name esteja definido corretamente
         self.folder_name = folder_name
-
         return self
 
     def find_path_by_folder_name(self, folder_name: str):
-        """
-        Carrega os dados do projeto salvo em data/<folder_name>.json,
-        popula os atributos do objeto e retorna a instância atual.
-        """
-        file_path = os.path.join(REPOSITORIES_DIR, f"{folder_name}.json")
+        """Retorna o caminho (diretório) do projeto salvo, ou '' se não existir."""
+        from app.src.db import session_scope
+        from app.src.db_models import Project as ProjectRow
+        from app.src.service.user_context import current_user_id
 
-        return file_path
-
+        uid = current_user_id()
+        with session_scope() as s:
+            row = (
+                s.query(ProjectRow)
+                .filter(ProjectRow.user_id == uid, ProjectRow.folder_name == folder_name)
+                .one_or_none()
+            )
+            return row.path if row else ""
 
     def update():
         """ update existing project"""
         pass
 
     def delete_project(self, folder_name):
-        """Remove o arquivo JSON correspondente ao projeto"""
-        file_path = os.path.join(REPOSITORIES_DIR, f"{folder_name}.json")
-        if os.path.exists(file_path):
-            os.remove(file_path)
+        """Remove o projeto do usuário atual. Retorna True se removeu algo."""
+        from app.src.db import session_scope
+        from app.src.db_models import Project as ProjectRow
+        from app.src.service.user_context import current_user_id
+
+        uid = current_user_id()
+        with session_scope() as s:
+            row = (
+                s.query(ProjectRow)
+                .filter(ProjectRow.user_id == uid, ProjectRow.folder_name == folder_name)
+                .one_or_none()
+            )
+            if row is None:
+                return False
+            s.delete(row)
             return True
-        return False
 
 
     # ========== métodos de suporte 

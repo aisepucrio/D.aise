@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Copy, Filter, Star, X } from "lucide-react";
 import { useSidebar } from "@/context/SidebarContext";
+import { useConfirm } from "@/context/ConfirmContext";
 import {
   PROMPT_TYPE_ORDER,
   usePromptLab,
@@ -43,6 +44,7 @@ export default function PromptLibraryPanel() {
     duplicatePrompt,
     newPrompt,
   } = usePromptLab();
+  const confirm = useConfirm();
   // const { collapsed } = useSidebar();
 
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>("All");
@@ -250,10 +252,12 @@ export default function PromptLibraryPanel() {
                               type="button"
                               onClick={async (e) => {
                                 e.stopPropagation();
-                                const confirmed = window.confirm(
-                                  "Are you sure you want to delete this prompt?\n\nThis action cannot be undone.",
-                                );
-
+                                const confirmed = await confirm({
+                                  title: "Excluir prompt?",
+                                  description: "Este prompt será removido. Esta ação não pode ser desfeita.",
+                                  confirmLabel: "Excluir",
+                                  danger: true,
+                                });
                                 if (!confirmed) return;
 
                                 await removePrompt(prompt.id);

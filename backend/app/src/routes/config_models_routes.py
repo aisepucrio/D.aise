@@ -128,9 +128,13 @@ def config_models_page():
 
 @config_models_bp.route("/api/llm-config", methods=["GET"])
 def get_llm_config():
-    """Retorna a configuração LLM salva (credenciais + última config salva)."""
-    config = _read_config()
-    return jsonify(config), 200
+    """Retorna a config LLM SEM segredos (apenas hasKey/maskedKey/storageMode)."""
+    from app.src.service import llm_config_service
+    try:
+        return jsonify(llm_config_service.get_config_for_api()), 200
+    except Exception as e:
+        print(f"llm_config: falha ao ler: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
 @config_models_bp.route("/api/llm-config", methods=["POST"])
@@ -138,25 +142,22 @@ def save_llm_config():
     """
     Recebe e persiste a configuração LLM enviada pelo frontend.
     Aceita payload completo ou parcial — faz merge com o que já está salvo.
+    Segredos em modo 'cloud' são cifrados; em modo 'local' vão para arquivo no host.
     """
+    from app.src.service import llm_config_service
+    from app.src.security.crypto import SecretKeyMissingError
+
     payload = request.get_json(silent=True)
     if not payload:
         return jsonify({"error": "Payload inválido ou vazio."}), 400
 
-    current = _read_config()
-
-    # Merge: sobrescreve apenas as chaves enviadas
-    for key in ["__lastSavedConfig", "gemini", "openai", "ollama", "github"]:
-        if key in payload:
-            if isinstance(payload[key], dict) and isinstance(current.get(key), dict):
-                current[key].update(payload[key])
-            else:
-                current[key] = payload[key]
-
     try:
-        _write_config(current)
+        config = llm_config_service.save_config(payload)
+    except SecretKeyMissingError as e:
+        # Faltou a chave-mestra para cifrar um segredo do modo cloud.
+        return jsonify({"error": str(e)}), 400
     except Exception as e:
         print(f"llm_config: falha ao gravar: {e}")
         return jsonify({"error": f"Falha ao gravar configuração: {str(e)}"}), 500
 
-    return jsonify({"message": "Configuração salva com sucesso.", "config": current}), 200
+    return jsonify({"message": "Configuração salva com sucesso.", "config": config}), 200

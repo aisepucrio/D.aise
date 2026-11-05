@@ -7,6 +7,7 @@ import {
   PROMPT_TYPE_ORDER,
   usePromptLab,
 } from "@/context/PromptLabContext";
+import { useConfirm } from "@/context/ConfirmContext";
 
 const ALL_VARIABLES = [
   { id: 1, name: "name", description: "Nome do projeto." },
@@ -80,6 +81,7 @@ export default function PromptLabPage() {
     isSaving,
     saveError,
   } = usePromptLab();
+  const confirm = useConfirm();
 
   // Required variables for the currently selected prompt type.
   const requiredVariables = useMemo(() => {
@@ -263,10 +265,12 @@ export default function PromptLabPage() {
           <button
             type="button"
             onClick={async () => {
-              const confirmed = window.confirm(
-                "Are you sure you want to delete this prompt?\n\nThis action cannot be undone.",
-              );
-
+              const confirmed = await confirm({
+                title: "Excluir prompt?",
+                description: "Este prompt será removido. Esta ação não pode ser desfeita.",
+                confirmLabel: "Excluir",
+                danger: true,
+              });
               if (!confirmed) return;
 
               await removePrompt(promptId);

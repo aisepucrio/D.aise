@@ -1,22 +1,53 @@
-# D.aise — sobe backend (Flask :8765) e frontend (Next.js :3000) juntos.
+# D.aise — stack completa em Docker: Postgres + backend (Flask :8765) + frontend (Next.js :3000).
 #
-#   docker compose up --build
+#   1) copie o .env de exemplo e edite:   cp .env.example .env
+#   2) gere a chave-mestra e coloque no .env (DAISE_SECRET_KEY) — veja o .env.example
+#   3) suba tudo:                          docker compose up --build
 #
+# O backend aplica migrações (alembic) e faz o seed automaticamente no boot.
 # Acesse o app em http://localhost:3000 (a API fica em http://localhost:8765).
+#
+# Toda a configuração fica no arquivo .env na raiz (ao lado deste arquivo).
 
 services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-daise}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-daise}
+      POSTGRES_DB: ${POSTGRES_DB:-daise}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-daise} -d ${POSTGRES_DB:-daise}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
   backend:
     build:
       context: ./backend
     image: daise-backend
     ports:
       - "8765:8765"
-    env_file:
-      - ./backend/.env
+    environment:
+      # Conexão com o serviço `db` (dentro da rede do compose).
+      DATABASE_URL: postgresql://${POSTGRES_USER:-daise}:${POSTGRES_PASSWORD:-daise}@db:5432/${POSTGRES_DB:-daise}
+      # Chave-mestra p/ cifrar credenciais no modo 'cloud'. OBRIGATÓRIA — veja o .env.example.
+      DAISE_SECRET_KEY: ${DAISE_SECRET_KEY:?defina DAISE_SECRET_KEY no arquivo .env (veja .env.example)}
+      USE_LLM: ${USE_LLM:-true}
+      DEBUG: ${DEBUG:-false}
+      # Usuário admin inicial (login enquanto não há convite/registro aberto).
+      DAISE_BOOTSTRAP_EMAIL: ${DAISE_BOOTSTRAP_EMAIL:-admin@daise.local}
+      DAISE_BOOTSTRAP_PASSWORD: ${DAISE_BOOTSTRAP_PASSWORD:-changeme}
     volumes:
-      # Persistem fora da imagem: config (tokens/API keys) e repositórios clonados.
+      # Persistem fora da imagem: credenciais no modo 'local' e repositórios clonados.
       - ./backend/data:/app/data
       - ./backend/repositories:/app/repositories
+    depends_on:
+      db:
+        condition: service_healthy
     restart: unless-stopped
 
   frontend:
@@ -25,7 +56,7 @@ services:
       args:
         # NEXT_PUBLIC_* é embutida no build. A URL precisa ser acessível pelo
         # NAVEGADOR (host), por isso localhost e não "backend".
-        NEXT_PUBLIC_API_URL: http://localhost:8765
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8765}
         NEXT_PUBLIC_APP_MODE: docker
     image: daise-frontend
     ports:
@@ -33,3 +64,6 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+
+volumes:
+  pgdata:

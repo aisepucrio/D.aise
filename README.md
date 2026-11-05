@@ -103,6 +103,7 @@ D.aise/
 - **Node.js** ≥ 18
 - **npm** ≥ 9
 - **Git** ≥ 2.0
+- **PostgreSQL** ≥ 14 (or use Docker, which provisions it for you)
 
 > **Prefer containers?** You can skip all of the above and run everything with Docker — see [Running with Docker](#-running-with-docker).
 
@@ -160,7 +161,7 @@ pip install -r requirements.txt
 
 #### Backend environment variables
 
-Create a `.env` file inside the `backend/` directory:
+Create a `.env` file inside the `backend/` directory (see `backend/.env.example`):
 
 ```env
 # Enable real LLM calls (set to false to use mockup output)
@@ -168,16 +169,32 @@ USE_LLM=true
 
 # Debug mode
 DEBUG=false
+
+# PostgreSQL connection (short postgresql:// form is auto-upgraded to psycopg3)
+DATABASE_URL=postgresql://daise:daise@localhost:5432/daise
+
+# Master key to encrypt credentials saved in "cloud" mode.
+# Generate one with: python -m app.src.security.crypto
+DAISE_SECRET_KEY=
 ```
 
-> **Note:** API keys and LLM preferences are stored at runtime in `backend/data/config/llm_config.json` (gitignored). You do not need to put your API key in `.env` — configure it through the web interface instead.
+Then create the schema and seed the prompts:
+
+```bash
+alembic upgrade head
+python -m scripts.migrate_json_to_pg
+```
+
+> **Note:** API keys and LLM preferences are configured through the web interface, not `.env`. Credentials are stored **encrypted in PostgreSQL** ("cloud" mode) or **locally on the host** (`backend/data/config/llm_config_local.json`, gitignored) — you choose per credential in the UI.
 
 #### Configuration files
 
 | Path | In Git? | Purpose |
 |------|---------|---------|
 | `backend/config/models.json` | Yes | LLM model catalog shown in the UI |
-| `backend/data/config/llm_config.json` | No | Saved API keys and LLM preferences (created on first save) |
+| `backend/.env` | No | `USE_LLM`, `DEBUG`, `DATABASE_URL`, `DAISE_SECRET_KEY`, `DAISE_BOOTSTRAP_*` |
+| PostgreSQL (`users`, `auth_sessions`, `credentials`, `user_settings`, `projects`, `prompts`, `generations`, `review_decisions`) | — | All app data: accounts, per-user encrypted credentials, projects, prompt library, and generation history |
+| `backend/data/config/llm_config_local.json` | No | Credentials saved in **local** mode only |
 
 ### Step 3: Set Up the Frontend
 
@@ -255,18 +272,57 @@ No local Python, Node, or Git installation is needed on the host — everything 
 
 ### Quick start
 
-From the repository root:
+Everything is configured through a single `.env` file at the repository root.
+
+**1. Create your `.env`:**
+
+```bash
+cp .env.example .env
+```
+
+**2. Generate a master key** (encrypts credentials saved in "cloud" mode) and paste it into `.env` as `DAISE_SECRET_KEY`:
+
+```bash
+# with Python:
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+# or with Docker only (no Python needed):
+docker run --rm python:3.12-slim sh -c "pip -q install cryptography && python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'"
+```
+
+**3. Bring the stack up:**
 
 ```bash
 docker compose up --build
 ```
 
-This builds both images and starts the services:
+This builds the images and starts all three services. The backend **applies the
+Alembic migrations and seeds the database automatically on boot** (creates the
+tables, the 9 prompts, and the initial admin user).
 
 | Service | URL | Container port → Host port |
 |---------|-----|----------------------------|
 | Frontend (Next.js) | http://localhost:3000 | 3000 → 3000 |
 | Backend (Flask API) | http://localhost:8765 | 8765 → 8765 |
+| PostgreSQL | (internal) | 5432 |
+
+Open `http://localhost:3000`, and log in at `/login` with the admin credentials
+from your `.env` (`DAISE_BOOTSTRAP_EMAIL` / `DAISE_BOOTSTRAP_PASSWORD`), or
+register a new account.
+
+> **Master key:** `docker compose up` fails on purpose if `DAISE_SECRET_KEY` is
+> not set. Keep the same key across restarts, or previously encrypted
+> credentials become unreadable.
+
+### What to configure in `.env`
+
+| Variable | Required | Purpose |
+|----------|----------|---------|
+| `DAISE_SECRET_KEY` | **Yes** | Fernet key that encrypts "cloud" credentials |
+| `DAISE_BOOTSTRAP_EMAIL` / `DAISE_BOOTSTRAP_PASSWORD` | No (defaults) | Initial admin login |
+| `USE_LLM` | No (default `true`) | `false` uses mockup output (no API calls) |
+| `DEBUG` | No (default `false`) | Flask debug mode |
+| `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | No (defaults) | Database credentials |
+| `NEXT_PUBLIC_API_URL` | No (default `http://localhost:8765`) | API URL reachable from the browser |
 
 Open your browser at `http://localhost:3000`.
 
@@ -274,20 +330,24 @@ To stop the stack, press `Ctrl+C`, or run `docker compose down` from another ter
 
 ### Configuration
 
-- **Backend `.env`** — the `backend` service reads `backend/.env` (same file used for the manual setup). Make sure it exists with at least `USE_LLM` and `DEBUG`. See [Backend environment variables](#backend-environment-variables).
-- **LLM providers, API keys, and the GitHub token** — configure them through the web UI exactly as in the manual setup. They are persisted to `backend/data/config/llm_config.json` on the host (see Volumes below), so they survive container restarts and rebuilds.
-- **Backend API URL** — the frontend reads `NEXT_PUBLIC_API_URL` at **build time** (the browser calls the API directly, so the URL must be reachable from your machine, not from inside the Docker network). It defaults to `http://localhost:8765`. To point the frontend at a different host/port, edit the `args` under the `frontend` service in `docker-compose.yml` and rebuild (`docker compose up --build`).
+- **Single `.env` at the repo root** — every setting (master key, admin login, `USE_LLM`, Postgres credentials, API URL) lives in the root `.env`. See [What to configure in `.env`](#what-to-configure-in-env) above. There is no separate `backend/.env` in the Docker flow.
+- **LLM providers, API keys, and the GitHub token** — configure them through the web UI after logging in. They are stored **per user** in PostgreSQL: "cloud" credentials are encrypted with `DAISE_SECRET_KEY`; "local" credentials stay on the host in `backend/data/config/llm_config_local.json`. Both survive restarts (the DB lives in the `pgdata` volume).
+- **Backend API URL** — the frontend reads `NEXT_PUBLIC_API_URL` at **build time** (the browser calls the API directly, so the URL must be reachable from your machine). Set it in `.env` and rebuild with `docker compose up --build`.
 
 ### Volumes (persisted data)
 
 The following host directories are mounted into the backend container so data survives rebuilds:
 
-| Host path | Container path | Contents |
-|-----------|----------------|----------|
-| `backend/data/` | `/app/data` | Saved API keys, GitHub token, and LLM preferences |
+| Volume / Host path | Container path | Contents |
+|--------------------|----------------|----------|
+| `pgdata` (named volume) | `/var/lib/postgresql/data` | PostgreSQL data (projects, prompts, history, encrypted config) |
+| `backend/data/` | `/app/data` | Credentials saved in **local** mode |
 | `backend/repositories/` | `/app/repositories` | Cloned/imported repositories |
 
-> **Security note:** `backend/data/config/llm_config.json` stores credentials (including the GitHub token) in plain text. Keep this directory private and never commit it.
+> The database lives in the Docker-managed named volume `pgdata` (survives
+> rebuilds). To wipe everything and start fresh: `docker compose down -v`.
+
+> **Security note:** credentials saved in **cloud** mode are encrypted with `DAISE_SECRET_KEY` before being stored in PostgreSQL. Credentials saved in **local** mode live in `backend/data/config/llm_config_local.json` in plain text — keep that directory private and never commit it.
 
 ### Notes and limitations
 
@@ -357,6 +417,13 @@ The Flask server runs on `http://localhost:8765`.
 | `GET` | `/api/models` | List available LLM models by provider |
 | `GET` | `/api/llm-config` | Get saved LLM configuration |
 | `POST` | `/api/llm-config` | Save LLM configuration |
+| `POST` | `/auth/register` | Register a user |
+| `POST` | `/auth/login` | Log in, returns a bearer token |
+| `POST` | `/auth/logout` | Revoke the current session |
+| `GET` | `/auth/me` | Current user (requires bearer token) |
+| `GET` | `/projects/<name>/history` | Generation history (with decisions) |
+| `GET` | `/projects/<name>/generations/<id>` | Full generation detail (prompt sent + output) |
+| `POST` | `/projects/<name>/decision` | Record an approve/reject decision |
 
 ## 📊 Experiments
 

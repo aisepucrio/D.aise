@@ -28,7 +28,6 @@ import GenerateReadmeModal, {
   type GenerateReadmeFormData,
 } from "@/components/features/GenerateReadmeModal";
 import ReadmeResultSection from "@/components/features/ReadmeResultSection";
-import ReadmeDiffSection from "@/components/features/ReadmeDiffSection";
 import type { FolderNode, TreeNode } from "../tree-types";
 import type { ApiProject } from "@/types/api";
 import {
@@ -42,6 +41,7 @@ import {
   updateReadme,
 } from "@/services/api";
 import { parseAsciiTree } from "@/utils/tree-parser";
+import { useConfirm } from "@/context/ConfirmContext";
 
 /* ——— Árvore de ficheiros ——— */
 
@@ -218,6 +218,7 @@ function ProjectsDashboardContent({ projectId }: { projectId: string }) {
   // projectId = folder_name, vindo do segmento dinâmico /projects/[id]
 
   const isLocalMode = process.env.NEXT_PUBLIC_APP_MODE === "local";
+  const confirm = useConfirm();
 
   // Full project from backend
   const [project, setProject] = useState<ApiProject | null>(null);
@@ -352,10 +353,15 @@ function ProjectsDashboardContent({ projectId }: { projectId: string }) {
     }
   }, [project, isAnalyzing]);
 
-  function handleCreateReadme() {
+  async function handleCreateReadme() {
     if (!project) return;
     if (hasReadme) {
-      if (!window.confirm("A README already exists. Do you want to overwrite or create another?")) return;
+      const ok = await confirm({
+        title: "Já existe um README",
+        description: "Já existe um README neste projeto. Deseja gerar uma nova versão mesmo assim?",
+        confirmLabel: "Gerar nova versão",
+      });
+      if (!ok) return;
     }
     setIsGenerateReadmeModalOpen(true);
   }
@@ -365,7 +371,15 @@ function ProjectsDashboardContent({ projectId }: { projectId: string }) {
     setIsGenerating(true);
     setError(null);
     try {
-      const llmConfig = await getLlmConfig();
+      const savedConfig = await getLlmConfig();
+      // O modelo escolhido no modal sobrescreve o provider/modelo salvos. O
+      // backend prioriza llm_provider/model no payload e resolve o segredo
+      // server-side pelo provider.
+      const llmConfig = {
+        ...savedConfig,
+        llm_provider: formData.provider,
+        model: formData.model,
+      };
       const commitOptions: string[] = [
         ...(formData.includeCommitsTitleDesc ? ["title_description"] : []),
         ...(formData.includeCommitsDiffs ? ["diffs"] : []),
@@ -384,7 +398,7 @@ function ProjectsDashboardContent({ projectId }: { projectId: string }) {
         commit_options: commitOptions.length > 0 ? commitOptions : undefined,
         llm_config: llmConfig,
       });
-      setOldReadmeText("");
+      setOldReadmeText(res.previous_readme ?? "");
       setReadmeText(res.content ?? "");
       setIsGenerateReadmeModalOpen(false);
     } catch (e) {
@@ -399,7 +413,12 @@ function ProjectsDashboardContent({ projectId }: { projectId: string }) {
     setIsUpdating(true);
     setError(null);
     try {
-      const llmConfig = await getLlmConfig();
+      const savedConfig = await getLlmConfig();
+      const llmConfig = {
+        ...savedConfig,
+        llm_provider: formData.provider,
+        model: formData.model,
+      };
       const res = await updateReadme({
         folder_name: project.folder_name,
         name: projectName,
@@ -853,15 +872,12 @@ function ProjectsDashboardContent({ projectId }: { projectId: string }) {
         {/* Inline README result — full width below the grid */}
         {readmeText && project ? (
           <div className="mt-6">
-            {oldReadmeText ? (
-              <ReadmeDiffSection
-                oldReadmeText={oldReadmeText}
-                newReadmeText={readmeText}
-                project={project}
-              />
-            ) : (
-              <ReadmeResultSection readmeText={readmeText} project={project} onReadmeCreated={handleRefreshTree} />
-            )}
+            <ReadmeResultSection
+              readmeText={readmeText}
+              oldReadmeText={oldReadmeText}
+              project={project}
+              onReadmeCreated={handleRefreshTree}
+            />
           </div>
         ) : null}
         </>
