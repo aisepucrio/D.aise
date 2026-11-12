@@ -27,9 +27,11 @@ CORS(
 def _startup_checks():
     """Inicializa o banco e valida a configuração de segurança."""
     try:
-        from app.src.db import init_db
-        init_db()
-        print("✅ Banco inicializado (tabelas verificadas).")
+        # MUDOU: cria o banco/usuário se faltarem, aplica as migrações e,
+        # no primeiro boot, faz o seed.
+        from app.src.db_bootstrap import bootstrap_database
+        bootstrap_database()
+        print("✅ Banco inicializado (migrações aplicadas).")
         from app.src.service.user_context import ensure_bootstrap_user
         ensure_bootstrap_user()
         print("✅ Usuário bootstrap garantido.")
@@ -46,5 +48,7 @@ def _startup_checks():
 
 
 if __name__ == "__main__":
-    _startup_checks()
+    # MUDOU: o boot do banco roda uma vez só (não repete no reloader do Flask).
+    if os.environ.get("WERKZEUG_RUN_MAIN") != "true":
+        _startup_checks()
     app.run(host="0.0.0.0", port=8765, debug=True)
